@@ -1,0 +1,2822 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blue Tilt Dash</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #edf6ff;
+      --muted: #93a6b8;
+      --line: rgba(165, 212, 255, 0.22);
+      --cyan: #43d9ff;
+      --blue: #2d76ff;
+      --red: #ff4c78;
+      --amber: #ffd66b;
+      --violet: #a77cff;
+      --field: #071018;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020407;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #game {
+      display: none;
+      background: radial-gradient(circle at 50% 45%, #0b1b28 0%, var(--field) 48%, #020407 100%);
+      cursor: crosshair;
+    }
+
+    .hud {
+      display: none;
+      position: fixed;
+      inset: 18px 20px auto 20px;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+    }
+
+    .hud-left {
+      display: grid;
+      gap: 12px;
+      min-width: min(280px, 46vw);
+    }
+
+    .meter {
+      min-width: 180px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .bar {
+      height: 8px;
+      border: 1px solid rgba(143, 216, 255, 0.35);
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      box-shadow: 0 0 18px rgba(67, 217, 255, 0.7);
+    }
+
+    .fill.attack {
+      background: linear-gradient(90deg, var(--amber), #fff3a6);
+      box-shadow: 0 0 18px rgba(255, 214, 107, 0.55);
+    }
+
+    .boss-hud {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      width: min(620px, calc(100vw - 36px));
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+    }
+
+    .boss-move {
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-align: center;
+    }
+
+    .fill.boss {
+      background: linear-gradient(90deg, var(--red), var(--violet));
+      box-shadow: 0 0 20px rgba(255, 76, 120, 0.65);
+    }
+
+    .break-label {
+      margin-top: 10px;
+    }
+
+    .break-bar {
+      height: 6px;
+      border-color: rgba(67, 217, 255, 0.45);
+    }
+
+    .fill.break {
+      background: linear-gradient(90deg, #e9f4ff, var(--cyan), var(--amber));
+      box-shadow: 0 0 18px rgba(67, 217, 255, 0.72);
+    }
+
+    .score {
+      text-align: right;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .status-line {
+      margin-top: 5px;
+      color: #d7e8f8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .volume-control {
+      margin-top: 9px;
+      display: inline-grid;
+      grid-template-columns: auto minmax(86px, 130px) auto;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: auto;
+    }
+
+    .volume-control input {
+      width: 100%;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    .center {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .panel {
+      max-width: 540px;
+      padding: 22px 24px;
+      border: 1px solid rgba(158, 223, 255, 0.18);
+      background: rgba(2, 8, 13, 0.78);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    .panel h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 7vw, 54px);
+      letter-spacing: 0;
+    }
+
+    .panel p {
+      margin: 6px 0;
+      color: #b9cad6;
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .difficulty-select {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+    }
+
+    .difficulty-select button {
+      min-width: 92px;
+      min-height: 42px;
+      border: 1px solid rgba(158, 223, 255, 0.32);
+      background: rgba(67, 217, 255, 0.1);
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .difficulty-select button:hover,
+    .difficulty-select button:focus-visible {
+      border-color: var(--cyan);
+      background: rgba(67, 217, 255, 0.22);
+      outline: none;
+    }
+
+    .difficulty-select button.selected {
+      border-color: var(--amber);
+      background: rgba(255, 214, 107, 0.18);
+      color: #fff3a6;
+    }
+
+    .difficulty-select.hidden {
+      display: none;
+    }
+
+    .pause-controls {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+      pointer-events: auto;
+    }
+
+    .pause-controls.hidden {
+      display: none;
+    }
+
+    .pause-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pause-actions button {
+      min-width: 132px;
+      min-height: 42px;
+      border: 1px solid rgba(158, 223, 255, 0.32);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pause-actions button:hover,
+    .pause-actions button:focus-visible {
+      border-color: var(--cyan);
+      background: rgba(67, 217, 255, 0.18);
+      outline: none;
+    }
+
+    .pause-actions .restart {
+      border-color: rgba(255, 214, 107, 0.55);
+      background: rgba(255, 214, 107, 0.14);
+      color: #fff3a6;
+    }
+
+    .visible {
+      display: grid;
+    }
+
+  </style>
+</head>
+<body>
+  <canvas class="screen" id="game" aria-label="Top view bullet hell dash game"></canvas>
+  <div class="hud" id="hud">
+    <div class="hud-left">
+      <div class="meter">
+        <div class="label"><span>DASH</span><span id="dashText">READY</span></div>
+        <div class="bar"><div class="fill" id="dashFill"></div></div>
+      </div>
+      <div class="meter">
+        <div class="label"><span>SLASH</span><span id="attackText">READY</span></div>
+        <div class="bar"><div class="fill attack" id="attackFill"></div></div>
+      </div>
+    </div>
+    <div class="score">
+      <div id="scoreText">0</div>
+      <div class="sub">Arrow/IJKL move | A dash | S slash | Hold D shot | ESC/P pause</div>
+      <div class="status-line" id="itemText">ITEMS: none</div>
+      <label class="volume-control">
+        <span>VOL</span>
+        <input id="volumeSlider" type="range" min="0" max="100" value="75" aria-label="Volume">
+        <span id="volumeText">55</span>
+      </label>
+    </div>
+  </div>
+  <div class="boss-hud" id="bossHud">
+    <div class="boss-move" id="bossMove">SYNCING</div>
+    <div class="label"><span>OVERDRIVE CORE</span><span id="bossText">100%</span></div>
+    <div class="bar"><div class="fill boss" id="bossFill"></div></div>
+    <div class="label break-label"><span>BREAK</span><span id="breakText">0%</span></div>
+    <div class="bar break-bar"><div class="fill break" id="breakFill"></div></div>
+  </div>
+  <div class="center" id="overlay">
+    <div class="panel">
+      <h1 id="overlayTitle">BLUE TILT DASH</h1>
+      <p id="overlayLine1">CREATOR JU_IL</p>
+      <p id="overlayLine2">탄막을 카운터해서 BREAK를 쌓고 코어를 정지시키세요.</p>
+      <p id="overlayLine3">이동: 방향키/IJKL | A 대시 | S 슬래시 | D 차징샷 | ESC/P 일시정지</p>
+      <div class="difficulty-select" id="difficultySelect" aria-label="난이도 선택">
+        <button type="button" data-difficulty="EASY">쉬움</button>
+        <button type="button" data-difficulty="NORMAL">보통</button>
+        <button type="button" data-difficulty="HARD">어려움</button>
+      </div>
+      <div class="pause-controls hidden" id="pauseControls">
+        <div class="difficulty-select" id="pauseDifficultySelect" aria-label="일시정지 난이도 선택">
+          <button type="button" data-difficulty="EASY">쉬움</button>
+          <button type="button" data-difficulty="NORMAL">보통</button>
+          <button type="button" data-difficulty="HARD">어려움</button>
+        </div>
+        <div class="pause-actions">
+          <button type="button" class="restart" id="restartWithDifficulty">재설정 후 재시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const hud = document.getElementById("hud");
+    const dashFill = document.getElementById("dashFill");
+    const dashText = document.getElementById("dashText");
+    const attackFill = document.getElementById("attackFill");
+    const attackText = document.getElementById("attackText");
+    const bossHud = document.getElementById("bossHud");
+    const bossFill = document.getElementById("bossFill");
+    const bossText = document.getElementById("bossText");
+    const breakFill = document.getElementById("breakFill");
+    const breakText = document.getElementById("breakText");
+    const bossMove = document.getElementById("bossMove");
+    const scoreText = document.getElementById("scoreText");
+    const itemText = document.getElementById("itemText");
+    const volumeSlider = document.getElementById("volumeSlider");
+    const volumeText = document.getElementById("volumeText");
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const overlayLine1 = document.getElementById("overlayLine1");
+    const overlayLine2 = document.getElementById("overlayLine2");
+    const overlayLine3 = document.getElementById("overlayLine3");
+    const difficultySelect = document.getElementById("difficultySelect");
+    const pauseControls = document.getElementById("pauseControls");
+    const pauseDifficultySelect = document.getElementById("pauseDifficultySelect");
+    const restartWithDifficulty = document.getElementById("restartWithDifficulty");
+
+    let mode = "intro";
+    let paused = false;
+    let difficultyMode = localStorage.getItem("blueTiltDifficulty") || "NORMAL";
+    let pendingDifficultyMode = difficultyMode;
+    let introReady = false;
+    let highScore = Number(localStorage.getItem("blueTiltHighScore") || "0");
+    let breakTutorialShown = localStorage.getItem("blueTiltBreakHelp") === "1";
+
+    const difficultySettings = {
+      EASY: { hp: 1.05, finalHp: 0.72, speed: 0.78, pattern: 1.28, label: "쉬움" },
+      NORMAL: { hp: 1.42, finalHp: 1, speed: 1, pattern: 1, label: "보통" },
+      HARD: { hp: 1.82, finalHp: 1.28, speed: 1.18, pattern: 0.78, label: "어려움" }
+    };
+    const PHASE_THRESHOLDS = [0.75, 0.5, 0.25];
+    const BASE_BOSS_HP = 620;
+    const BASE_FINAL_CORE_HP = 430;
+
+    function enterBulletIntro() {
+      mode = "intro";
+      introReady = false;
+      if (!difficultySettings[difficultyMode]) difficultyMode = "NORMAL";
+      canvas.style.display = "block";
+      hud.style.display = "flex";
+      bossHud.style.display = "none";
+      overlay.classList.add("visible");
+      overlayTitle.textContent = "BLUE TILT DASH";
+      overlayLine1.textContent = "CREATOR JU_IL";
+      overlayLine2.textContent = "난이도를 선택하세요.";
+      overlayLine3.textContent = "선택 후 설명을 확인하고 아무 키나 누르면 시작합니다.";
+      difficultySelect.classList.remove("hidden");
+      pauseControls.classList.add("hidden");
+      updateDifficultyButtons();
+      resize();
+    }
+
+    function updateDifficultyButtons() {
+      for (const button of difficultySelect.querySelectorAll("button")) {
+        button.classList.toggle("selected", button.dataset.difficulty === difficultyMode);
+      }
+      for (const button of pauseDifficultySelect.querySelectorAll("button")) {
+        button.classList.toggle("selected", button.dataset.difficulty === pendingDifficultyMode);
+      }
+    }
+
+    function chooseIntroDifficulty(nextDifficulty) {
+      if (!difficultySettings[nextDifficulty]) return;
+      difficultyMode = nextDifficulty;
+      introReady = true;
+      localStorage.setItem("blueTiltDifficulty", difficultyMode);
+      updateDifficultyButtons();
+      overlayTitle.textContent = "BLUE TILT DASH";
+      overlayLine1.textContent = `난이도 ${diff().label}`;
+      overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
+      overlayLine3.textContent = "이동: 방향키/IJKL | A 대시 | S 슬래시 | D 차징샷 | ESC/P 일시정지 | 아무 키로 시작";
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+    }
+
+    function choosePauseDifficulty(nextDifficulty) {
+      if (!difficultySettings[nextDifficulty]) return;
+      pendingDifficultyMode = nextDifficulty;
+      updateDifficultyButtons();
+      if (paused) overlayLine3.textContent = `재시작 난이도 ${difficultySettings[pendingDifficultyMode].label}`;
+    }
+
+    const keys = new Set();
+    const bullets = [];
+    const trails = [];
+    const sparks = [];
+    const warnings = [];
+    const slashes = [];
+    const lasers = [];
+    const items = [];
+    const shots = [];
+    const impactRings = [];
+    const popups = [];
+    const pendingSnipes = [];
+    const LIMITS = {
+      bullets: 260,
+      sparks: 110,
+      trails: 64,
+      warnings: 24,
+      lasers: 10,
+      shots: 64,
+      impactRings: 36,
+      popups: 24,
+      pendingSnipes: 5
+    };
+    installArrayLimit(bullets, LIMITS.bullets);
+    installArrayLimit(sparks, LIMITS.sparks);
+    installArrayLimit(trails, LIMITS.trails);
+    installArrayLimit(warnings, LIMITS.warnings);
+    installArrayLimit(lasers, LIMITS.lasers);
+    installArrayLimit(shots, LIMITS.shots);
+    installArrayLimit(impactRings, LIMITS.impactRings);
+    installArrayLimit(popups, LIMITS.popups);
+    installArrayLimit(pendingSnipes, LIMITS.pendingSnipes);
+
+    const player = {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      r: 12,
+      angle: -Math.PI / 2,
+      dashCooldown: 0,
+      dashEnergy: 100,
+      dashMax: 100,
+      dashCost: 42,
+      dashRegen: 24,
+      dashTime: 0,
+      dashBossCooldown: 0,
+      attackCooldown: 0,
+      attackTime: 0,
+      charge: 0,
+      charging: false,
+      shotCooldown: 0,
+      slowTimer: 0,
+      powerTimer: 0,
+      shotTimer: 0,
+      shield: 0,
+      invuln: 0,
+      dashChain: 0,
+      dashChainTimer: 0,
+      knockbackTimer: 0,
+      upgrades: [],
+      alive: true
+    };
+
+    const upgrades = {
+      shot: 0,
+      slash: 0,
+      dash: 0,
+      break: 0
+    };
+
+    const upgradePool = [
+      { id: "dash", name: "DASH CELL", desc: "대시 최대 에너지 증가 / 회복량 증가 / 비용 감소" },
+      { id: "slash", name: "EDGE BLADE", desc: "슬래시 범위 증가 / 보스 피해 증가 / 쿨타임 감소" },
+      { id: "shot", name: "MULTI CORE", desc: "차징샷 추가 탄 발사 / 피해 증가 / 차징 속도 증가" },
+      { id: "shield", name: "SHIELD", desc: "실드 1개 획득 / 최대 3개" },
+      { id: "overclock", name: "OVERCLOCK", desc: "일정 시간 대시 / 슬래시 / 샷 쿨타임 감소" },
+      { id: "break", name: "BREAK ENGINE", desc: "BREAK 획득량 증가 / GROGGY 지속시간 증가" }
+    ];
+    let upgradeChoices = [];
+
+    const boss = {
+      x: 0,
+      y: 0,
+      r: 42,
+      hp: 520,
+      maxHp: 520,
+      hitFlash: 0,
+      hitKickX: 0,
+      hitKickY: 0,
+      hurtPulse: 0,
+      breakValue: 0,
+      groggyTimer: 0,
+      phaseShiftTimer: 0,
+      breakFlash: 0,
+      exposedTimer: 0,
+      phase: 0,
+      lastPhase: 0,
+      pulse: 0,
+      laserClock: 3.2,
+      attackName: "SYNCING",
+      rhythmStep: 0,
+      alive: true
+    };
+
+    const BEAT = 0.68;
+    const FINAL_WARNING_DURATION = 4.2;
+    let audioCtx = null;
+    let masterGain = null;
+    const AUDIO_BOOST = 1.75;
+    volumeSlider.value = localStorage.getItem("blueTiltVolume") || volumeSlider.value;
+    let masterVolume = Number(volumeSlider.value) / 100;
+    let bgmTimer = null;
+    let bgmStep = 0;
+    let bgmChordStep = 0;
+    let noiseBuffer = null;
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let last = performance.now();
+    let time = 0;
+    let score = 0;
+    let started = false;
+    let gameOver = false;
+    let patternClock = 0;
+    let phaseClock = 3.4;
+    let patternIndex = 0;
+    let beatClock = BEAT;
+    let beatPulse = 0;
+    let beatIndex = 0;
+    let difficulty = 0;
+    let clearBank = 0;
+    let itemSequence = 0;
+    let nextDropChance = 0.45;
+    let toneBudget = 0;
+    let shake = 0;
+    let hitStop = 0;
+    let hudClock = 0;
+    let runStage = 1;
+    let finalWarningTimer = 0;
+    let warningPulse = 0;
+    let warningSirenClock = 0;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!started) {
+        player.x = width / 2;
+        player.y = height / 2;
+      }
+    }
+
+    function resetGame() {
+      paused = false;
+      upgrades.shot = 0;
+      upgrades.slash = 0;
+      upgrades.dash = 0;
+      upgrades.break = 0;
+      upgradeChoices = [];
+      bullets.length = 0;
+      trails.length = 0;
+      sparks.length = 0;
+      warnings.length = 0;
+      slashes.length = 0;
+      lasers.length = 0;
+      items.length = 0;
+      shots.length = 0;
+      impactRings.length = 0;
+      popups.length = 0;
+      pendingSnipes.length = 0;
+      player.x = width / 2;
+      player.y = height - 120;
+      player.vx = 0;
+      player.vy = 0;
+      player.angle = -Math.PI / 2;
+      player.dashCooldown = 0;
+      player.dashMax = 100 + upgrades.dash * 18;
+      player.dashCost = Math.max(30, 42 - upgrades.dash * 4);
+      player.dashRegen = 24 + upgrades.dash * 8;
+      player.dashEnergy = player.dashMax;
+      player.dashTime = 0;
+      player.dashBossCooldown = 0;
+      player.attackCooldown = 0;
+      player.attackTime = 0;
+      player.charge = 0;
+      player.charging = false;
+      player.shotCooldown = 0;
+      player.slowTimer = 0;
+      player.powerTimer = 0;
+      player.shotTimer = 0;
+      player.shield = 0;
+      player.invuln = 0;
+      player.dashChain = 0;
+      player.dashChainTimer = 0;
+      player.knockbackTimer = 0;
+      player.upgrades = [];
+      player.alive = true;
+      boss.x = width / 2;
+      boss.y = Math.max(110, height * 0.22);
+      boss.maxHp = Math.round(BASE_BOSS_HP * diff().hp);
+      boss.hp = boss.maxHp;
+      boss.hitFlash = 0;
+      boss.hitKickX = 0;
+      boss.hitKickY = 0;
+      boss.hurtPulse = 0;
+      boss.breakValue = 0;
+      boss.groggyTimer = 0;
+      boss.phaseShiftTimer = 0;
+      boss.breakFlash = 0;
+      boss.exposedTimer = 0;
+      boss.phase = 0;
+      boss.lastPhase = 0;
+      boss.pulse = 0;
+      boss.laserClock = 3.6;
+      boss.attackName = "WAKE BEAT";
+      boss.rhythmStep = 0;
+      boss.alive = true;
+      time = 0;
+      score = 0;
+      runStage = 1;
+      finalWarningTimer = 0;
+      warningPulse = 0;
+      warningSirenClock = 0;
+      patternClock = 0;
+      phaseClock = 4.6;
+      patternIndex = 0;
+      beatClock = BEAT;
+      beatPulse = 0;
+      beatIndex = 0;
+      difficulty = 0;
+      clearBank = 0;
+      itemSequence = 0;
+      nextDropChance = 0.45;
+      toneBudget = 0;
+      hudClock = 0;
+      shake = 0;
+      hitStop = 0;
+      started = true;
+      gameOver = false;
+      mode = "bullet";
+      introReady = false;
+      overlay.classList.remove("visible");
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+      bossHud.style.display = "block";
+      playSound("start");
+      startBgm();
+    }
+
+    function keyVector() {
+      let x = 0;
+      let y = 0;
+      if (keys.has("arrowleft") || keys.has("j")) x -= 1;
+      if (keys.has("arrowright") || keys.has("l")) x += 1;
+      if (keys.has("arrowup") || keys.has("i")) y -= 1;
+      if (keys.has("arrowdown") || keys.has("k")) y += 1;
+      const len = Math.hypot(x, y) || 1;
+      return { x: x / len, y: y / len, active: x !== 0 || y !== 0 };
+    }
+
+    function dash() {
+      if (!player.alive || player.dashCooldown > 0 || mode !== "bullet" || player.dashEnergy < player.dashCost) return;
+      const move = keyVector();
+      const dx = move.active ? move.x : Math.cos(player.angle);
+      const dy = move.active ? move.y : Math.sin(player.angle);
+      player.vx += dx * 980;
+      player.vy += dy * 980;
+      player.angle = Math.atan2(dy, dx);
+      player.dashEnergy = Math.max(0, player.dashEnergy - player.dashCost);
+      player.dashCooldown = 0.12;
+      player.dashTime = 0.17;
+      player.invuln = 0.24;
+      shake = 8;
+      playSound("dash");
+      addImpactRing(player.x, player.y, 28, "#43d9ff", 0.2, 5);
+      addPopup("DASH", player.x, player.y - 28, "#43d9ff", 13);
+      for (let i = 0; i < 14; i++) {
+        trails.push({
+          x: player.x - dx * i * 11,
+          y: player.y - dy * i * 11,
+          angle: player.angle,
+          life: 0.34 - i * 0.014,
+          max: 0.34,
+          tilt: (i - 6) * 0.018
+        });
+      }
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!masterGain) {
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = boostedVolume();
+        masterGain.connect(audioCtx.destination);
+      }
+      masterGain.gain.setTargetAtTime(boostedVolume(), audioCtx.currentTime, 0.015);
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+
+    function tone(freq, duration, type = "sine", gain = 0.05, slide = 1) {
+      if (toneBudget >= 16 || document.hidden) return;
+      toneBudget += 1;
+      setTimeout(() => { toneBudget = Math.max(0, toneBudget - 1); }, Math.max(40, duration * 1000));
+      try {
+        const ac = ensureAudio();
+        const osc = ac.createOscillator();
+        const amp = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ac.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * slide), ac.currentTime + duration);
+        amp.gain.setValueAtTime(gain, ac.currentTime);
+        amp.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+        osc.connect(amp);
+        amp.connect(masterGain || ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + duration);
+      } catch (err) {
+        toneBudget = Math.max(0, toneBudget - 1);
+        console.warn("Audio tone skipped:", err);
+      }
+    }
+
+    function noiseHit(duration = 0.04, gain = 0.01, filterFreq = 7000, filterType = "highpass") {
+      if (toneBudget >= 16 || document.hidden) return;
+      toneBudget += 1;
+      setTimeout(() => { toneBudget = Math.max(0, toneBudget - 1); }, Math.max(40, duration * 1000));
+      try {
+        const ac = ensureAudio();
+        if (!noiseBuffer) {
+          const size = Math.floor(ac.sampleRate * 0.18);
+          noiseBuffer = ac.createBuffer(1, size, ac.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        }
+        const src = ac.createBufferSource();
+        const filter = ac.createBiquadFilter();
+        const amp = ac.createGain();
+        src.buffer = noiseBuffer;
+        filter.type = filterType;
+        filter.frequency.setValueAtTime(filterFreq, ac.currentTime);
+        amp.gain.setValueAtTime(gain, ac.currentTime);
+        amp.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+        src.connect(filter);
+        filter.connect(amp);
+        amp.connect(masterGain || ac.destination);
+        src.start();
+        src.stop(ac.currentTime + duration);
+      } catch (err) {
+        toneBudget = Math.max(0, toneBudget - 1);
+        console.warn("Noise hit skipped:", err);
+      }
+    }
+
+    function bgmKick(strength = 1) {
+      tone(72, 0.09, "sine", 0.022 * strength, 0.48);
+    }
+
+    function bgmSnare(strength = 1) {
+      noiseHit(0.07, 0.012 * strength, 1800, "bandpass");
+      tone(170, 0.045, "triangle", 0.007 * strength, 0.7);
+    }
+
+    function bgmHat(strength = 1) {
+      noiseHit(0.025, 0.0055 * strength, 7600, "highpass");
+    }
+
+    function setVolume(value) {
+      masterVolume = Math.max(0, Math.min(1, value / 100));
+      volumeText.textContent = String(Math.round(masterVolume * 100));
+      if (masterGain && audioCtx) {
+        masterGain.gain.setTargetAtTime(boostedVolume(), audioCtx.currentTime, 0.02);
+      }
+    }
+
+    function boostedVolume() {
+      return Math.min(1.65, masterVolume * AUDIO_BOOST);
+    }
+
+    function playSound(name) {
+      if (name === "dash") tone(420, 0.12, "sawtooth", 0.035, 2.4);
+      if (name === "dashCut") {
+        tone(760, 0.055, "triangle", 0.032, 1.7);
+        noiseHit(0.028, 0.012, 8200, "highpass");
+      }
+      if (name === "slash") {
+        tone(760, 0.08, "triangle", 0.055, 0.45);
+        setTimeout(() => tone(1180, 0.05, "square", 0.025, 0.6), 24);
+      }
+      if (name === "hit") tone(190, 0.12, "square", 0.045, 0.55);
+      if (name === "heavyHit") {
+        tone(120, 0.13, "square", 0.065, 0.52);
+        tone(420, 0.08, "sawtooth", 0.035, 0.62);
+        noiseHit(0.045, 0.018, 2100, "bandpass");
+      }
+      if (name === "breakGain") {
+        tone(540, 0.08, "triangle", 0.035, 1.45);
+        setTimeout(() => tone(840, 0.07, "square", 0.02, 1.25), 45);
+      }
+      if (name === "groggy") {
+        tone(160, 0.24, "sawtooth", 0.06, 0.62);
+        setTimeout(() => tone(520, 0.18, "triangle", 0.045, 1.35), 110);
+        noiseHit(0.12, 0.025, 1800, "bandpass");
+      }
+      if (name === "hurt") tone(90, 0.18, "sawtooth", 0.06, 0.55);
+      if (name === "win") {
+        tone(440, 0.13, "triangle", 0.05, 1.25);
+        setTimeout(() => tone(660, 0.16, "triangle", 0.05, 1.2), 130);
+        setTimeout(() => tone(990, 0.22, "triangle", 0.05, 1.1), 280);
+      }
+      if (name === "start") tone(260, 0.16, "sine", 0.035, 1.8);
+      if (name === "phase") {
+        tone(330, 0.08, "square", 0.035, 1.8);
+        setTimeout(() => tone(520, 0.1, "triangle", 0.035, 1.5), 70);
+      }
+      if (name === "phaseShift") {
+        tone(95, 0.22, "sawtooth", 0.07, 0.48);
+        tone(360, 0.18, "square", 0.034, 1.9);
+        noiseHit(0.09, 0.026, 1200, "bandpass");
+      }
+      if (name === "siren") {
+        tone(620, 0.18, "sawtooth", 0.045, 0.72);
+        setTimeout(() => tone(930, 0.16, "sawtooth", 0.032, 0.68), 90);
+      }
+      if (name === "laserCharge") tone(180, 0.42, "sawtooth", 0.026, 2.8);
+      if (name === "laserFire") {
+        tone(72, 0.28, "square", 0.07, 0.65);
+        tone(520, 0.16, "sawtooth", 0.032, 0.7);
+      }
+      if (name === "itemDrop") {
+        tone(520, 0.08, "triangle", 0.03, 1.35);
+        setTimeout(() => tone(780, 0.08, "triangle", 0.025, 1.2), 70);
+      }
+      if (name === "itemGet") {
+        tone(660, 0.07, "square", 0.03, 1.5);
+        setTimeout(() => tone(990, 0.09, "triangle", 0.032, 1.25), 80);
+      }
+    }
+
+    function startBgm() {
+      stopBgm();
+      bgmStep = 0;
+      bgmChordStep = 0;
+      const bass = [
+        110, 0, 110, 146.83, 110, 0, 164.81, 0, 98, 0, 123.47, 0, 146.83, 0, 110, 0,
+        110, 0, 164.81, 0, 146.83, 0, 123.47, 0, 98, 0, 110, 0, 123.47, 146.83, 164.81, 0,
+        130.81, 0, 130.81, 174.61, 146.83, 0, 196, 0, 110, 0, 146.83, 0, 164.81, 0, 130.81, 0,
+        98, 0, 123.47, 0, 146.83, 0, 164.81, 0, 220, 0, 196, 0, 164.81, 146.83, 123.47, 0
+      ];
+      const lead = [
+        440, 0, 493.88, 523.25, 0, 587.33, 659.25, 0, 587.33, 523.25, 493.88, 0, 440, 392, 440, 0,
+        493.88, 0, 523.25, 587.33, 659.25, 0, 783.99, 0, 739.99, 659.25, 587.33, 0, 523.25, 493.88, 440, 0,
+        523.25, 0, 587.33, 659.25, 0, 698.46, 783.99, 0, 880, 783.99, 698.46, 0, 659.25, 587.33, 523.25, 0,
+        587.33, 0, 659.25, 783.99, 880, 0, 987.77, 0, 880, 783.99, 659.25, 0, 587.33, 659.25, 783.99, 0
+      ];
+      const chords = [
+        [220, 277.18, 329.63],
+        [246.94, 293.66, 369.99],
+        [196, 261.63, 329.63],
+        [164.81, 246.94, 329.63],
+        [261.63, 329.63, 392],
+        [220, 293.66, 369.99],
+        [246.94, 329.63, 415.3],
+        [196, 293.66, 392]
+      ];
+      bgmTimer = setInterval(() => {
+        if (mode !== "bullet" || gameOver) return;
+        const intensity = Math.min(1, difficulty / 1.8);
+        const phase = Math.min(3, boss.phase);
+        const step = bgmStep % bass.length;
+        const phaseGain = 0.011 + phase * 0.0025 + intensity * 0.004;
+        const bassNote = bass[step];
+        if (bassNote) tone(bassNote, 0.12, "sawtooth", phaseGain, 0.98);
+        if (step % 16 === 0 || step % 16 === 8 || (phase >= 3 && step % 16 === 12)) {
+          bgmKick(0.65 + phase * 0.12 + intensity * 0.2);
+        }
+        if (phase >= 1 && step % 2 === 1) bgmHat(0.75 + phase * 0.08);
+        if (phase >= 3 && step % 4 === 2) bgmHat(0.55);
+        if (phase >= 2 && (step % 16 === 4 || step % 16 === 12)) bgmSnare(0.8 + intensity * 0.25);
+        const note = lead[bgmStep % lead.length];
+        if (note && (phase >= 2 || step % 4 === 0 || step % 4 === 3)) {
+          tone(note * (phase >= 3 ? 1.25 : 1), phase >= 3 ? 0.055 : 0.075, "triangle", 0.007 + phase * 0.002 + intensity * 0.003, 1.02);
+        }
+        if (phase >= 3 && step % 4 === 1) {
+          const fastNote = lead[(bgmStep + 2) % lead.length];
+          if (fastNote) tone(fastNote * 1.5, 0.04, "square", 0.0055 + intensity * 0.002, 0.92);
+        }
+        if (bgmStep % 4 === 0) {
+          const chord = chords[bgmChordStep % chords.length];
+          for (const n of chord) tone(n, 0.16, "sine", 0.0045 + intensity * 0.002, 1.01);
+          bgmChordStep += 1;
+        }
+        bgmStep += 1;
+      }, BEAT * 250);
+    }
+
+    function stopBgm() {
+      if (bgmTimer) clearInterval(bgmTimer);
+      bgmTimer = null;
+      bgmStep = 0;
+      bgmChordStep = 0;
+    }
+
+    function distSq(ax, ay, bx, by) {
+      const dx = ax - bx;
+      const dy = ay - by;
+      return dx * dx + dy * dy;
+    }
+
+    function trimOldest(list, max) {
+      if (list.length <= max) return;
+      list.splice(0, list.length - max);
+    }
+
+    function installArrayLimit(list, max) {
+      const nativePush = list.push;
+      list.push = function (...items) {
+        nativePush.apply(this, items);
+        if (this.length > max) this.splice(0, this.length - max);
+        return this.length;
+      };
+    }
+
+    function pushLimited(list, item, max) {
+      list.push(item);
+      if (list.length > max) list.splice(0, list.length - max);
+      return item;
+    }
+
+    function trimEffectLists() {
+      trimOldest(bullets, LIMITS.bullets);
+      trimOldest(sparks, LIMITS.sparks);
+      trimOldest(trails, LIMITS.trails);
+      trimOldest(warnings, LIMITS.warnings);
+      trimOldest(lasers, LIMITS.lasers);
+      trimOldest(shots, LIMITS.shots);
+      trimOldest(impactRings, LIMITS.impactRings);
+      trimOldest(popups, LIMITS.popups);
+      trimOldest(pendingSnipes, LIMITS.pendingSnipes);
+    }
+
+    function addImpactRing(x, y, radius, color, life = 0.22, width = 4) {
+      pushLimited(impactRings, { x, y, radius, color, life, max: life, width }, LIMITS.impactRings);
+    }
+
+    function addPopup(text, x, y, color = "#e9f4ff", size = 15) {
+      pushLimited(popups, {
+        text,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 26,
+        vy: -44 - Math.random() * 22,
+        color,
+        size,
+        life: 0.58,
+        max: 0.58
+      }, LIMITS.popups);
+    }
+
+    function addBreak(amount, reason, x = boss.x, y = boss.y) {
+      if (!boss.alive || boss.groggyTimer > 0 || amount <= 0) return;
+      amount *= 1 + upgrades.break * 0.18;
+      if (!breakTutorialShown) {
+        breakTutorialShown = true;
+        localStorage.setItem("blueTiltBreakHelp", "1");
+        addPopup("BREAK가 차면 보스가 기절합니다!", width / 2, height * 0.34, "#ffd66b", 19);
+      }
+      boss.breakValue = Math.min(100, boss.breakValue + amount);
+      boss.breakFlash = 0.42;
+      score += amount * 12;
+      playSound("breakGain");
+      addImpactRing(x, y, 30 + amount * 0.55, "#43d9ff", 0.24, 4);
+      addPopup(`BREAK +${Math.round(amount)}`, x, y - 28, "#43d9ff", 15);
+      if (boss.breakValue >= 100) triggerGroggy(reason);
+    }
+
+    function triggerGroggy(reason = "BREAK") {
+      boss.breakValue = 0;
+      boss.groggyTimer = 4.2 + upgrades.break * 0.45;
+      boss.breakFlash = 1;
+      boss.exposedTimer = 0;
+      boss.laserClock = Math.max(boss.laserClock, 3.8);
+      pendingSnipes.length = 0;
+      lasers.length = 0;
+      clearNearbyBullets(boss.x, boss.y, Math.max(width, height), false);
+      setBossMove(`${reason} GROGGY`);
+      hitStop = Math.max(hitStop, 0.075);
+      playSound("groggy");
+      addImpactRing(boss.x, boss.y, boss.r + 80, "#ffd66b", 0.55, 9);
+      addPopup("GROGGY! DAMAGE UP", boss.x, boss.y - boss.r - 36, "#ffd66b", 21);
+    }
+
+    function triggerPhaseShift() {
+      const cleared = clearNearbyBullets(boss.x, boss.y, Math.max(width, height), false);
+      lasers.length = 0;
+      pendingSnipes.length = 0;
+      warnings.length = 0;
+      boss.groggyTimer = 0;
+      boss.phaseShiftTimer = 1.45;
+      boss.hitFlash = Math.max(boss.hitFlash, 0.42);
+      boss.hurtPulse = 1.25;
+      boss.breakFlash = 0.75;
+      boss.laserClock = Math.max(boss.laserClock, 2.7);
+      patternClock = Math.max(patternClock, BEAT * 2.2);
+      beatClock = Math.max(beatClock, BEAT * 1.15);
+
+      const dx = player.x - boss.x;
+      const dy = player.y - boss.y;
+      const len = Math.hypot(dx, dy) || 1;
+      player.vx = dx / len * 780;
+      player.vy = dy / len * 780;
+      player.knockbackTimer = 0.42;
+      player.invuln = Math.max(player.invuln, 1.25);
+      player.dashCooldown = Math.min(player.dashCooldown, 0.28);
+      player.charging = false;
+      player.charge = 0;
+
+      shake = Math.max(shake, 24);
+      hitStop = Math.max(hitStop, 0.065);
+      playSound("phaseShift");
+      addImpactRing(boss.x, boss.y, boss.r + 70, "#ffffff", 0.42, 9);
+      addImpactRing(boss.x, boss.y, boss.r + 132, bossPalette().warn, 0.62, 6);
+      addPopup(`PHASE ${boss.phase + 1}`, boss.x, boss.y - boss.r - 44, "#ffffff", 24);
+      addPopup(`CLEARED ${cleared}`, player.x, player.y - 34, "#43d9ff", 16);
+      for (let i = 0; i < 42; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 160 + Math.random() * 520;
+        sparks.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.55, max: 0.55, color: i % 3 ? bossPalette().warn : "#ffffff" });
+      }
+      if (!gameOver && runStage === 1 && boss.phase > 0) showUpgradeChoices();
+    }
+
+    function diff() {
+      return difficultySettings[difficultyMode] || difficultySettings.NORMAL;
+    }
+
+    function hasActiveDangerTelegraph() {
+      return warnings.length > 0 || pendingSnipes.length > 0 || lasers.some((laser) => laser.life > laser.fire + 0.18);
+    }
+
+    function updateDangerTelegraphsOnly(dt) {
+      for (let i = warnings.length - 1; i >= 0; i--) {
+        warnings[i].life -= dt;
+        if (warnings[i].life <= 0) warnings.splice(i, 1);
+      }
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const laser = lasers[i];
+        laser.life -= dt;
+        const nowFire = laser.life <= laser.fire + 0.18 && laser.life > 0.18;
+        if (!laser.fired && nowFire) {
+          laser.fired = true;
+          setBossMove("LASER BREAK");
+          playSound("laserFire");
+        }
+        if (laser.life <= 0) lasers.splice(i, 1);
+      }
+      for (let i = pendingSnipes.length - 1; i >= 0; i--) {
+        const snipe = pendingSnipes[i];
+        snipe.timer -= dt;
+        if (snipe.timer <= snipe.exposedAt) {
+          boss.exposedTimer = Math.max(boss.exposedTimer, snipe.timer + 0.08);
+        }
+        if (snipe.timer <= 0) {
+          for (let j = -3; j <= 3; j++) {
+            const a = snipe.angle + j * 0.055;
+            spawnBullet(snipe.x, snipe.y, Math.cos(a) * 345, Math.sin(a) * 345, 7, "#ffffff", 0, { kind: "sniper" });
+          }
+          spawnWarning(snipe.x, snipe.y, snipe.targetX, snipe.targetY, "#ffffff");
+          playSound("laserFire");
+          pendingSnipes.splice(i, 1);
+        }
+      }
+      boss.exposedTimer = Math.max(0, boss.exposedTimer - dt);
+    }
+
+    function bossTakeDamage(damage, sourceX, sourceY, power = 1, label = "") {
+      if (!boss.alive || damage <= 0) return;
+      const weakOpen = boss.groggyTimer > 0 || boss.exposedTimer > 0 || boss.phaseShiftTimer > 0;
+      if (!weakOpen) damage *= 0.62;
+      if (boss.groggyTimer > 0) {
+        damage *= 1.75;
+        power += 0.8;
+      }
+      if (boss.exposedTimer > 0 || boss.phaseShiftTimer > 0) {
+        damage *= 1.55;
+        power += 0.45;
+        if (Math.random() < 0.22 && items.length < 4) spawnItem(boss.x, boss.y + boss.r + 18);
+      }
+      boss.hp = Math.max(0, boss.hp - damage);
+      boss.hitFlash = Math.max(boss.hitFlash, 0.2 + power * 0.045);
+      boss.hurtPulse = Math.max(boss.hurtPulse, 1);
+      const dx = boss.x - sourceX;
+      const dy = boss.y - sourceY;
+      const len = Math.hypot(dx, dy) || 1;
+      boss.hitKickX += dx / len * (7 + power * 5);
+      boss.hitKickY += dy / len * (7 + power * 5);
+      if (!weakOpen) shake = Math.max(shake, 6 + power * 4);
+      hitStop = Math.max(hitStop, 0.028 + power * 0.012);
+      playSound(power > 1.5 ? "heavyHit" : "hit");
+      addImpactRing(boss.x, boss.y, boss.r + 16 + power * 8, power > 1.5 ? "#ffd66b" : "#43d9ff", 0.24 + power * 0.04, 5 + power * 1.5);
+      addPopup(label || `-${Math.round(damage)}`, boss.x + (Math.random() - 0.5) * 34, boss.y - boss.r - 10, boss.groggyTimer > 0 ? "#ffd66b" : power > 1.5 ? "#ffd66b" : "#e9f4ff", 15 + power * 2);
+      for (let i = 0; i < 12 + Math.floor(power * 8); i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 90 + Math.random() * (240 + power * 80);
+        sparks.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.38 + power * 0.04, max: 0.42 + power * 0.04, color: i % 3 ? "#ffd66b" : "#43d9ff" });
+      }
+      if (boss.hp <= 0) winGame();
+    }
+
+    function dashCutBullet(b, combo) {
+      const dx = b.x - player.x;
+      const dy = b.y - player.y;
+      const len = Math.hypot(dx, dy) || 1;
+      sparks.push({ x: b.x, y: b.y, vx: dx / len * 320, vy: dy / len * 320, life: 0.26, max: 0.26, color: combo % 2 ? "#43d9ff" : "#e9f4ff" });
+      addImpactRing(b.x, b.y, 18 + Math.min(22, combo * 2), "#43d9ff", 0.18, 3);
+      player.dashChain += 1;
+      player.dashChainTimer = 0.72;
+      player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + 8 + upgrades.dash * 2);
+      score += 42 + player.dashChain * 9;
+      hitStop = Math.max(hitStop, 0.018);
+      if (combo === 1 || combo % 4 === 0) {
+        playSound("dashCut");
+        addPopup(`DASH x${player.dashChain}`, player.x, player.y - 24, "#43d9ff", 14 + Math.min(8, player.dashChain));
+      }
+    }
+
+    function dashHitBoss() {
+      if (!boss.alive || !player.alive || player.dashBossCooldown > 0) return;
+      const dx = player.x - boss.x;
+      const dy = player.y - boss.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const combo = Math.min(10, player.dashChain);
+      const damage = 8 + upgrades.dash * 4 + combo * 1.5;
+      player.dashBossCooldown = 0.28;
+      player.dashTime = 0;
+      player.invuln = Math.max(player.invuln, 0.36);
+      player.knockbackTimer = Math.max(player.knockbackTimer, 0.18);
+      player.vx = dx / len * 720;
+      player.vy = dy / len * 720;
+      player.dashChain += 2;
+      player.dashChainTimer = 0.8;
+      score += 180 + upgrades.dash * 45 + combo * 18;
+      addBreak(8 + upgrades.dash * 2, "DASH RAM", player.x, player.y);
+      bossTakeDamage(damage, player.x, player.y, 1.25 + upgrades.dash * 0.18, `DASH ${Math.round(damage)}`);
+      shake = Math.max(shake, 11);
+      hitStop = Math.max(hitStop, 0.04);
+      playSound("heavyHit");
+      addImpactRing(player.x, player.y, 46, "#43d9ff", 0.24, 6);
+      addImpactRing(boss.x, boss.y, boss.r + 34, "#ffd66b", 0.28, 6);
+      addPopup("DASH RAM", player.x, player.y - 34, "#43d9ff", 18);
+    }
+
+    function breakBurstBomb(b, source = "COUNTER") {
+      const cleared = clearNearbyBullets(b.x, b.y, 150 + boss.phase * 18, false, 18 + boss.phase * 4);
+      registerClears(Math.max(1, Math.floor(cleared * 0.55)), b.x, b.y);
+      addBreak(18 + Math.min(14, cleared * 1.2), "BOMB BREAK", b.x, b.y);
+      hitStop = Math.max(hitStop, 0.055);
+      playSound("heavyHit");
+      addImpactRing(b.x, b.y, 72, "#ffd66b", 0.32, 7);
+      addPopup(`${source} BOMB`, b.x, b.y - 24, "#ffd66b", 17);
+      for (let i = 0; i < 28; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 120 + Math.random() * 360;
+        sparks.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.42, max: 0.42, color: i % 2 ? "#ffd66b" : "#43d9ff" });
+      }
+    }
+
+    function cancelSniperWithShot(shot) {
+      const exposed = pendingSnipes.some((snipe) => snipe.timer <= snipe.exposedAt + 0.06);
+      if (!shot.charged || !exposed || pendingSnipes.length === 0) return false;
+      pendingSnipes.length = 0;
+      boss.exposedTimer = 0;
+      addBreak(32 + (shot.full ? 12 : 0), "SNIPER COUNTER", boss.x, boss.y);
+      setBossMove("SNIPER COUNTER");
+      hitStop = Math.max(hitStop, 0.07);
+      addImpactRing(boss.x, boss.y, boss.r + 68, "#ffffff", 0.34, 8);
+      addPopup("COUNTER BREAK", boss.x, boss.y - boss.r - 42, "#ffffff", 20);
+      playSound("heavyHit");
+      return true;
+    }
+
+    function showUpgradeChoices() {
+      mode = "upgrade";
+      paused = true;
+      gameOver = false;
+      shake = 0;
+      hitStop = 0;
+      player.alive = true;
+      player.invuln = Math.max(player.invuln, 1.2);
+      player.vx = 0;
+      player.vy = 0;
+      upgradeChoices = [];
+      const pool = [...upgradePool];
+      while (upgradeChoices.length < 3 && pool.length) {
+        const index = Math.floor(Math.random() * pool.length);
+        upgradeChoices.push(pool.splice(index, 1)[0]);
+      }
+      overlay.classList.add("visible");
+      overlayTitle.textContent = "PHASE DATA CAPTURED";
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+      overlayLine1.textContent = `1: ${upgradeChoices[0].name} - ${upgradeChoices[0].desc}`;
+      overlayLine2.textContent = `2: ${upgradeChoices[1].name} - ${upgradeChoices[1].desc}`;
+      overlayLine3.textContent = `3: ${upgradeChoices[2].name} - ${upgradeChoices[2].desc}`;
+      bossMove.textContent = "SELECT UPGRADE 1 / 2 / 3";
+      addPopup("CHOOSE UPGRADE", player.x, player.y - 40, "#ffd66b", 18);
+      playSound("itemDrop");
+    }
+
+    function applyUpgradeChoice(key) {
+      if (mode !== "upgrade") return;
+      const choice = upgradeChoices[Number(key) - 1];
+      if (!choice) return;
+      if (choice.id === "shot") upgrades.shot += 1;
+      if (choice.id === "slash") upgrades.slash += 1;
+      if (choice.id === "dash") upgrades.dash += 1;
+      if (choice.id === "break") upgrades.break += 1;
+      if (choice.id === "shield") player.shield = Math.min(3, player.shield + 1);
+      if (choice.id === "overclock") {
+        player.powerTimer = Math.max(player.powerTimer, 8);
+        player.shotTimer = Math.max(player.shotTimer, 8);
+        player.dashEnergy = player.dashMax;
+      }
+      player.dashMax = 100 + upgrades.dash * 18;
+      player.dashCost = Math.max(30, 42 - upgrades.dash * 4);
+      player.dashRegen = 24 + upgrades.dash * 8;
+      player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + 36);
+      player.upgrades.push(choice.name);
+      paused = false;
+      overlay.classList.remove("visible");
+      addPopup(`UPGRADE ACQUIRED: ${choice.name}`, player.x, player.y - 44, "#ffd66b", 18);
+      playSound("itemGet");
+      if (boss.phase >= 3 && runStage === 1) {
+        startFinalWarning();
+      } else {
+        mode = "bullet";
+      }
+    }
+
+    function startFinalWarning() {
+      runStage = 2;
+      mode = "finalWarning";
+      paused = false;
+      overlay.classList.add("visible");
+      overlayTitle.textContent = "- WARNING -";
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+      overlayLine1.textContent = "최종 코어가 재기동합니다.";
+      overlayLine2.textContent = "사이렌 종료 후 난이도가 급상승합니다.";
+      overlayLine3.textContent = "준비하세요.";
+      finalWarningTimer = FINAL_WARNING_DURATION;
+      warningPulse = 1;
+      warningSirenClock = 0;
+      shake = Math.max(shake, 10);
+      playSound("phaseShift");
+      startBgm();
+    }
+
+    function startFinalBoss() {
+      if (mode === "bullet" && runStage === 2 && finalWarningTimer <= 0) return;
+      mode = "bullet";
+      paused = false;
+      finalWarningTimer = 0;
+      warningPulse = 0;
+      warningSirenClock = 0;
+      overlay.classList.remove("visible");
+      player.alive = true;
+      player.invuln = 1.35;
+      player.dashEnergy = player.dashMax;
+      const finalCoreHp = Math.round(BASE_FINAL_CORE_HP * diff().finalHp);
+      boss.maxHp += finalCoreHp;
+      boss.hp = Math.max(boss.hp, finalCoreHp);
+      boss.alive = true;
+      boss.groggyTimer = 0;
+      boss.phaseShiftTimer = 2.1;
+      boss.laserClock = 2.2;
+      difficulty = 3.0;
+      patternClock = 0.9;
+      beatClock = BEAT;
+      setBossMove("FINAL CORE");
+      addImpactRing(boss.x, boss.y, boss.r + 120, "#ff4c78", 0.8, 10);
+      addPopup("FINAL BOSS", boss.x, boss.y - boss.r - 50, "#ff4c78", 25);
+      playSound("groggy");
+    }
+
+    function togglePause() {
+      if (mode !== "bullet" || gameOver) return;
+      paused = !paused;
+      if (paused) {
+        pendingDifficultyMode = difficultyMode;
+        updateDifficultyButtons();
+        overlay.classList.add("visible");
+        overlayTitle.textContent = "PAUSED";
+        overlayLine1.textContent = "ESC 또는 P를 누르면 전투로 복귀합니다.";
+        overlayLine2.textContent = "난이도를 바꾸려면 아래에서 선택한 뒤 재설정 후 재시작을 누르세요.";
+        overlayLine3.textContent = `현재 난이도 ${diff().label}`;
+        difficultySelect.classList.add("hidden");
+        pauseControls.classList.remove("hidden");
+      } else {
+        overlay.classList.remove("visible");
+        pauseControls.classList.add("hidden");
+      }
+    }
+
+    function restartFromPause() {
+      if (!paused || mode !== "bullet") return;
+      difficultyMode = pendingDifficultyMode;
+      localStorage.setItem("blueTiltDifficulty", difficultyMode);
+      resetGame();
+    }
+
+    function awardLaserDashBreak(laser, timingLabel) {
+      laser.grazed = true;
+      player.dashChain += 5;
+      player.dashChainTimer = 0.9;
+      player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + 24 + upgrades.dash * 4);
+      addBreak(timingLabel === "JUST" ? 30 : 24, "LASER DASH", player.x, player.y);
+      score += 420 + player.dashChain * 18;
+      hitStop = Math.max(hitStop, 0.04);
+      playSound("dashCut");
+      addImpactRing(player.x, player.y, 68, "#43d9ff", 0.28, 7);
+      addPopup(`${timingLabel} LASER x${player.dashChain}`, player.x, player.y - 36, "#43d9ff", 19);
+      for (let i = 0; i < 10; i++) {
+        trails.push({
+          x: player.x - Math.cos(player.angle) * i * 13,
+          y: player.y - Math.sin(player.angle) * i * 13,
+          angle: player.angle,
+          life: 0.24 - i * 0.01,
+          max: 0.24,
+          tilt: (i - 4) * 0.024
+        });
+      }
+    }
+
+    function spawnItem(x, y) {
+      const types = ["blade", "barrier", "bomb", "overclock"];
+      const type = types[itemSequence % types.length];
+      itemSequence += 1;
+      items.push({
+        type,
+        x: Math.max(40, Math.min(width - 40, x)),
+        y: Math.max(80, Math.min(height - 80, y)),
+        vx: (Math.random() - 0.5) * 34,
+        vy: -18 - Math.random() * 22,
+        age: 0,
+        life: 12,
+        r: 15,
+        bob: Math.random() * Math.PI * 2
+      });
+      playSound("itemDrop");
+    }
+
+    function registerClears(count, x, y) {
+      if (count <= 0) return;
+      clearBank += count;
+      while (clearBank >= 10) {
+        clearBank -= 10;
+        const chance = Math.min(0.82, nextDropChance + boss.phase * 0.06);
+        if (Math.random() < chance && items.length < 4) {
+          spawnItem(x || player.x, y || player.y);
+          nextDropChance = 0.28;
+        } else {
+          nextDropChance = Math.min(0.82, nextDropChance + 0.18);
+          score += 120;
+        }
+      }
+    }
+
+    function clearNearbyBullets(x, y, radius, reward = true, maxClears = Infinity) {
+      let cleared = 0;
+      let sx = 0;
+      let sy = 0;
+      const radiusSqBase = radius * radius;
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        if (cleared >= maxClears) break;
+        const b = bullets[i];
+        const rr = radius + b.r;
+        if (distSq(b.x, b.y, x, y) <= Math.max(radiusSqBase, rr * rr)) {
+          sx += b.x;
+          sy += b.y;
+          sparks.push({ x: b.x, y: b.y, vx: (b.x - x) * 1.8, vy: (b.y - y) * 1.8, life: 0.28, max: 0.28, color: "#ffd66b" });
+          bullets.splice(i, 1);
+          cleared += 1;
+        }
+      }
+      if (reward && cleared > 0) registerClears(cleared, sx / cleared, sy / cleared);
+      return cleared;
+    }
+
+    function applyItem(type) {
+      playSound("itemGet");
+      if (type === "blade") {
+        player.powerTimer = Math.max(player.powerTimer, 8);
+        player.shotTimer = Math.max(player.shotTimer, 8);
+        score += 350;
+      }
+      if (type === "barrier") {
+        player.shield = Math.min(3, player.shield + 1);
+        score += 250;
+      }
+      if (type === "bomb") {
+        const cleared = clearNearbyBullets(player.x, player.y, Math.max(width, height), false);
+        registerClears(Math.floor(cleared * 0.5), player.x, player.y);
+        shake = Math.max(shake, 12);
+        score += 120 + cleared * 25;
+      }
+      if (type === "overclock") {
+        player.powerTimer = Math.max(player.powerTimer, 5);
+        player.shotTimer = Math.max(player.shotTimer, 7);
+        player.dashCooldown = 0;
+        player.dashEnergy = player.dashMax;
+        player.attackCooldown = 0;
+        player.shotCooldown = 0;
+        player.invuln = Math.max(player.invuln, 0.45);
+        score += 300;
+      }
+    }
+
+    function fireChargedShot() {
+      if (!player.alive || mode !== "bullet" || player.shotCooldown > 0) return;
+      const charge = player.charge;
+      player.charge = 0;
+      player.charging = false;
+      if (charge < 0.08) return;
+      const powered = player.shotTimer > 0 || player.powerTimer > 0;
+      const ratio = Math.min(1, charge / (powered ? 0.9 : 1.2));
+      const full = ratio >= 0.98;
+      const tap = ratio < 0.34;
+      const speed = tap ? 820 : full ? 430 : 650 - ratio * 120;
+      const radius = tap ? 5 + ratio * 8 : 8 + ratio * (powered ? 24 : 19);
+      const damage = Math.round((tap ? 3 : powered ? 8 : 5) + ratio * (powered ? 26 : 19) + upgrades.shot * (tap ? 2 : 6));
+      const pierce = tap ? 1 : full ? (powered ? 4 : 3) : (powered ? 3 : 2);
+      const homing = tap ? 0.001 : full ? (powered ? 0.018 : 0.012) : 0.006 + ratio * 0.008;
+      const shotCount = 1 + upgrades.shot * (tap ? 1 : 2);
+      const spread = upgrades.shot > 0 ? 0.13 : 0;
+      for (let i = 0; i < shotCount; i++) {
+        const offset = i - (shotCount - 1) / 2;
+        const a = player.angle + offset * spread;
+        pushLimited(shots, {
+          x: player.x + Math.cos(a) * 22,
+          y: player.y + Math.sin(a) * 22,
+          vx: Math.cos(a) * speed,
+          vy: Math.sin(a) * speed,
+          r: radius * (i === Math.floor(shotCount / 2) ? 1 : 0.72),
+          damage: Math.max(2, Math.round(damage * (i === Math.floor(shotCount / 2) ? 1 : 0.55))),
+          pierce,
+          homing,
+          charged: !tap,
+          full,
+          scanClock: 0,
+          life: full ? 2.8 : tap ? 1.15 : 1.9,
+          color: powered || upgrades.shot > 0 ? "#a77cff" : "#43d9ff"
+        }, LIMITS.shots);
+      }
+      player.shotCooldown = tap ? 0.16 : powered ? 0.35 : 0.55;
+      if (full) player.slowTimer = powered ? 0.38 : 0.52;
+      player.invuln = Math.max(player.invuln, 0.08);
+      tone(300 + ratio * 420, 0.12, "triangle", 0.04, 1.8);
+    }
+
+    function takeHit() {
+      if (!player.alive || gameOver) return;
+      if (player.shield > 0) {
+        player.shield -= 1;
+        player.invuln = 0.7;
+        clearNearbyBullets(player.x, player.y, 115, false);
+        shake = Math.max(shake, 10);
+        playSound("phase");
+        return;
+      }
+      endGame();
+    }
+
+    function slash() {
+      if (!player.alive || player.attackCooldown > 0 || mode !== "bullet") return;
+      const powered = player.powerTimer > 0;
+      player.attackCooldown = Math.max(0.14, (powered ? 0.22 : 0.32) - upgrades.slash * 0.035);
+      player.attackTime = 0.18;
+      player.invuln = Math.max(player.invuln, 0.1);
+      const range = (powered ? 140 : 102) + upgrades.slash * 34;
+      const arc = (powered ? Math.PI * 1.34 : Math.PI * 1.08) + upgrades.slash * 0.18;
+      const centerX = player.x + Math.cos(player.angle) * 42;
+      const centerY = player.y + Math.sin(player.angle) * 42;
+      let cleared = 0;
+      let clearX = 0;
+      let clearY = 0;
+      let ringCleared = 0;
+      playSound("slash");
+      slashes.push({ x: player.x, y: player.y, angle: player.angle, life: 0.16, max: 0.16, range, powered });
+
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        const dx = b.x - player.x;
+        const dy = b.y - player.y;
+        const distSqToPlayer = dx * dx + dy * dy;
+        const bulletAngle = Math.atan2(dy, dx);
+        const angleDiff = bulletAngle - player.angle;
+        const diff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+        const rr = range + b.r;
+        if (distSqToPlayer < rr * rr && Math.abs(diff) < arc * 0.5) {
+          sparks.push({ x: b.x, y: b.y, vx: dx * 2.5, vy: dy * 2.5, life: 0.25, max: 0.25, color: "#43d9ff" });
+          clearX += b.x;
+          clearY += b.y;
+          if (b.kind === "ring") ringCleared += 1;
+          bullets.splice(i, 1);
+          if (b.kind === "burstBomb" && b.breakable) breakBurstBomb(b, "SLASH");
+          cleared += 1;
+        }
+      }
+      if (cleared > 0) registerClears(cleared, clearX / cleared, clearY / cleared);
+      if (ringCleared >= 5) {
+        addBreak(Math.min(28, 12 + ringCleared * 2.2), "RING CUT", player.x, player.y);
+        hitStop = Math.max(hitStop, 0.045);
+        addImpactRing(player.x, player.y, 64 + ringCleared * 4, "#43d9ff", 0.3, 6);
+        addPopup(`RING CUT x${ringCleared}`, player.x, player.y - 38, "#43d9ff", 17);
+      }
+
+      const bossRange = boss.r + range * 0.55;
+      if (boss.alive && distSq(boss.x, boss.y, centerX, centerY) < bossRange * bossRange) {
+        const damage = (powered ? 11 : 7) + upgrades.slash * 7 + Math.min(powered ? 9 : 6, cleared);
+        score += 180 + cleared * 20;
+        bossTakeDamage(damage, player.x, player.y, powered ? 2.1 : 1.35, `SLASH ${damage}`);
+      } else if (cleared > 0) {
+        score += cleared * 30;
+      }
+    }
+
+    function spawnBullet(x, y, vx, vy, radius, color, wobble = 0, meta = {}) {
+      const speedScale = diff().speed;
+      pushLimited(bullets, { x, y, vx: vx * speedScale, vy: vy * speedScale, r: radius, color, wobble, age: 0, ...meta }, LIMITS.bullets);
+    }
+
+    function spawnBurstBomb() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const side = Math.floor(Math.random() * 4);
+      const p = edgePoint(side, 0.18 + Math.random() * 0.64);
+      const tx = width * (0.32 + Math.random() * 0.36);
+      const ty = height * (0.34 + Math.random() * 0.34);
+      const a = Math.atan2(ty - p.y, tx - p.x);
+      const speed = 115 + boss.phase * 18 + difficulty * 12;
+      pushLimited(bullets, {
+        x: p.x,
+        y: p.y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        r: 13 + boss.phase * 2,
+        color: colors.warn,
+        wobble: 0.12,
+        age: 0,
+        kind: "burstBomb",
+        breakable: true,
+        splitTime: Math.max(0.8, 1.25 - boss.phase * 0.13),
+        splitCount: 12 + boss.phase * 5 + Math.floor(difficulty * 3)
+      }, LIMITS.bullets);
+      spawnWarning(p.x, p.y, tx, ty, colors.warn);
+    }
+
+    function spawnWarning(x1, y1, x2, y2, color) {
+      pushLimited(warnings, { x1, y1, x2, y2, color, life: 0.55, max: 0.55 }, LIMITS.warnings);
+    }
+
+    function distanceToSegment(px, py, ax, ay, bx, by) {
+      const abx = bx - ax;
+      const aby = by - ay;
+      const apx = px - ax;
+      const apy = py - ay;
+      const ab2 = abx * abx + aby * aby || 1;
+      const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / ab2));
+      const x = ax + abx * t;
+      const y = ay + aby * t;
+      const dx = px - x;
+      const dy = py - y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function bossPalette() {
+      if (boss.phase === 0) return { core: "#43d9ff", bullet: "#5ef0ff", warn: "#7be7ff" };
+      if (boss.phase === 1) return { core: "#ffd66b", bullet: "#ffd66b", warn: "#ffe59b" };
+      if (boss.phase === 2) return { core: "#a77cff", bullet: "#a77cff", warn: "#d2b8ff" };
+      return { core: "#ff4c78", bullet: "#ff4c78", warn: "#ff9bb1" };
+    }
+
+    function edgePoint(side, t) {
+      const margin = 58;
+      if (side === 0) return { x: -margin, y: t * height };
+      if (side === 1) return { x: width + margin, y: t * height };
+      if (side === 2) return { x: t * width, y: -margin };
+      return { x: t * width, y: height + margin };
+    }
+
+    function aimedBurst() {
+      const side = Math.floor(Math.random() * 4);
+      const p = edgePoint(side, Math.random());
+      const angle = Math.atan2(player.y - p.y, player.x - p.x);
+      for (let i = -3; i <= 3; i++) {
+        const a = angle + i * 0.13;
+        const speed = 200 + Math.random() * 65 + time * 2.5;
+        spawnBullet(p.x, p.y, Math.cos(a) * speed, Math.sin(a) * speed, 6, "#ff4c78");
+      }
+    }
+
+    function crossingLanes() {
+      const horizontal = Math.random() > 0.5;
+      const count = 6 + boss.phase + Math.floor(difficulty * 0.8);
+      for (let i = 0; i < count; i++) {
+        const gap = (horizontal ? height : width) / count;
+        const offset = gap * (i + 0.5);
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        if (horizontal) {
+          const y = offset + Math.sin(time + i) * 26;
+          spawnWarning(dir > 0 ? -40 : width + 40, y, dir > 0 ? width + 40 : -40, y, "#ffd66b");
+          spawnBullet(dir > 0 ? -50 : width + 50, y, dir * (235 + boss.phase * 24 + time * 2), 0, 5, "#ffd66b", 0.55);
+        } else {
+          const x = offset + Math.cos(time + i) * 26;
+          spawnWarning(x, dir > 0 ? -40 : height + 40, x, dir > 0 ? height + 40 : -40, "#5ef0ff");
+          spawnBullet(x, dir > 0 ? -50 : height + 50, 0, dir * (235 + boss.phase * 24 + time * 2), 5, "#5ef0ff", 0.55);
+        }
+      }
+    }
+
+    function spiralGate() {
+      const cx = width / 2;
+      const cy = height / 2;
+      const base = time * 2.1;
+      const count = 18 + boss.phase * 4;
+      for (let i = 0; i < count; i++) {
+        if (i % Math.max(5, 7 - boss.phase) === patternIndex % Math.max(5, 7 - boss.phase)) continue;
+        const a = base + i * Math.PI * 2 / count;
+        const p = {
+          x: cx + Math.cos(a) * (Math.max(width, height) / 2 + 70),
+          y: cy + Math.sin(a) * (Math.max(width, height) / 2 + 70)
+        };
+        const inward = Math.atan2(cy - p.y, cx - p.x) + Math.sin(time * 1.5) * 0.25;
+        spawnBullet(p.x, p.y, Math.cos(inward) * (175 + boss.phase * 18), Math.sin(inward) * (175 + boss.phase * 18), 4.5, "#a77cff");
+      }
+    }
+
+    function sniperFan() {
+      if (!boss.alive) return;
+      const corners = [
+        { x: -40, y: -40 },
+        { x: width + 40, y: -40 },
+        { x: width + 40, y: height + 40 },
+        { x: -40, y: height + 40 }
+      ];
+      const c = corners[patternIndex % corners.length];
+      const a0 = Math.atan2(player.y - c.y, player.x - c.x);
+      const targetX = player.x;
+      const targetY = player.y;
+      pushLimited(pendingSnipes, {
+        x: c.x,
+        y: c.y,
+        angle: a0,
+        targetX,
+        targetY,
+        timer: 0.82,
+        max: 0.82,
+        exposedAt: 0.34,
+        fired: false
+      }, LIMITS.pendingSnipes);
+      spawnWarning(c.x, c.y, player.x, player.y, "#ffffff");
+      addPopup("SNIPER AIM", boss.x, boss.y - boss.r - 28, "#ffffff", 15);
+    }
+
+    function bossRing() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const count = 12 + boss.phase * 6 + Math.floor(difficulty * 2);
+      const spin = time * (0.65 + boss.phase * 0.32);
+      const ringId = time + Math.random();
+      for (let i = 0; i < count; i++) {
+        if (i % 6 === 0 && boss.phase === 1 && difficulty < 1.2) continue;
+        if (i % 5 === 0 && boss.phase === 2 && difficulty < 1.7) continue;
+        const a = spin + i * Math.PI * 2 / count;
+        const speed = 105 + boss.phase * 38 + difficulty * 12;
+        spawnBullet(boss.x, boss.y, Math.cos(a) * speed, Math.sin(a) * speed, 4.5 + boss.phase * 0.3, colors.bullet, 0, { kind: "ring", ringId });
+      }
+    }
+
+    function bossNeedles() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const base = Math.atan2(player.y - boss.y, player.x - boss.x);
+      const spread = boss.phase >= 2 ? 2 : 1;
+      for (let i = -spread; i <= spread; i++) {
+        const a = base + i * (0.11 - boss.phase * 0.012);
+        spawnBullet(boss.x, boss.y, Math.cos(a) * (245 + boss.phase * 42), Math.sin(a) * (245 + boss.phase * 42), 5.5, colors.bullet);
+      }
+      spawnWarning(boss.x, boss.y, player.x, player.y, colors.warn);
+    }
+
+    function bossCross() {
+      if (!boss.alive || boss.phase < 2) return;
+      const colors = bossPalette();
+      const base = time * 0.7;
+      for (let i = 0; i < 4; i++) {
+        const a = base + i * Math.PI / 2;
+        spawnBullet(boss.x, boss.y, Math.cos(a) * (180 + boss.phase * 28), Math.sin(a) * (180 + boss.phase * 28), 6, colors.bullet, 0.35);
+      }
+    }
+
+    function scatterSpray() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const count = 10 + boss.phase * 5 + Math.floor(difficulty * 4);
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const speed = 90 + Math.random() * (155 + boss.phase * 30);
+        spawnBullet(boss.x + (Math.random() - 0.5) * 34, boss.y + (Math.random() - 0.5) * 34, Math.cos(a) * speed, Math.sin(a) * speed, 4.2 + Math.random() * 2.2, colors.bullet, boss.phase >= 2 ? 0.22 : 0);
+      }
+    }
+
+    function setBossMove(name) {
+      boss.attackName = name;
+      bossMove.textContent = name;
+    }
+
+    function chargeLaser() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+      const length = Math.max(width, height) * 1.45;
+      const charge = Math.max(0.78, 1.18 - boss.phase * 0.12);
+      const fire = 0.32 + boss.phase * 0.04;
+      pushLimited(lasers, {
+        x1: boss.x,
+        y1: boss.y,
+        x2: boss.x + Math.cos(angle) * length,
+        y2: boss.y + Math.sin(angle) * length,
+        angle,
+        charge,
+        fire,
+        life: charge + fire + 0.18,
+        max: charge + fire + 0.18,
+        width: 18 + boss.phase * 5,
+        color: colors.warn,
+        fired: false
+      }, LIMITS.lasers);
+      setBossMove("CHARGE LASER");
+      playSound("laserCharge");
+    }
+
+    function chargeWallLaser(side = Math.floor(Math.random() * 4), announce = true) {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const margin = 34;
+      const span = Math.max(width, height) * 1.2;
+      let x1;
+      let y1;
+      let x2;
+      let y2;
+      if (side === 0) {
+        x1 = -margin; y1 = Math.random() * height; x2 = width + margin; y2 = y1 + (Math.random() - 0.5) * height * 0.35;
+      } else if (side === 1) {
+        x1 = width + margin; y1 = Math.random() * height; x2 = -margin; y2 = y1 + (Math.random() - 0.5) * height * 0.35;
+      } else if (side === 2) {
+        x1 = Math.random() * width; y1 = -margin; x2 = x1 + (Math.random() - 0.5) * width * 0.35; y2 = height + margin;
+      } else {
+        x1 = Math.random() * width; y1 = height + margin; x2 = x1 + (Math.random() - 0.5) * width * 0.35; y2 = -margin;
+      }
+      const charge = Math.max(0.72, 1.08 - boss.phase * 0.08 - difficulty * 0.08);
+      const fire = 0.26 + boss.phase * 0.035;
+      pushLimited(lasers, {
+        x1, y1, x2, y2,
+        angle: Math.atan2(y2 - y1, x2 - x1),
+        charge,
+        fire,
+        life: charge + fire + 0.18,
+        max: charge + fire + 0.18,
+        width: 14 + boss.phase * 4 + difficulty * 2,
+        color: colors.warn,
+        fired: false
+      }, LIMITS.lasers);
+      if (announce) {
+        setBossMove("WALL LASER");
+        playSound("laserCharge");
+      }
+    }
+
+    function chargeWallLaserGrid() {
+      if (!boss.alive) return;
+      const count = boss.phase >= 3 ? 4 : 3;
+      const baseSide = Math.floor(Math.random() * 4);
+      for (let i = 0; i < count; i++) {
+        chargeWallLaser((baseSide + (i % 2) * 2) % 4, false);
+      }
+      setBossMove("LASER GRID");
+      playSound("laserCharge");
+    }
+
+    function bossOuterCurtain() {
+      if (!boss.alive) return;
+      const colors = bossPalette();
+      const side = Math.floor(Math.random() * 4);
+      const count = 5 + boss.phase + Math.floor(difficulty * 1.5);
+      for (let i = 0; i < count; i++) {
+        const p = edgePoint(side, (i + 0.5) / count);
+        const targetX = width / 2 + Math.sin(time + i) * width * 0.22;
+        const targetY = height / 2 + Math.cos(time * 0.7 + i) * height * 0.22;
+        const a = Math.atan2(targetY - p.y, targetX - p.x);
+        const speed = 150 + boss.phase * 28 + difficulty * 24;
+        spawnBullet(p.x, p.y, Math.cos(a) * speed, Math.sin(a) * speed, 5.5, colors.bullet, boss.phase >= 2 ? 0.35 : 0);
+      }
+    }
+
+    function bossRhythmAttack() {
+      const step = boss.rhythmStep % 16;
+      if (step === 0) {
+        setBossMove("OUTER CURTAIN");
+        bossOuterCurtain();
+      } else if (step === 2 || step === 10) {
+        setBossMove("CORE RING");
+        bossRing();
+      } else if (step === 4) {
+        setBossMove("LANE SWEEP");
+        crossingLanes();
+      } else if (step === 6 && (boss.phase >= 1 || difficulty > 0.8)) {
+        if (boss.phase >= 3 || difficulty > 1.8) {
+          chargeWallLaserGrid();
+        } else {
+          setBossMove("WALL LASER");
+          chargeWallLaser();
+        }
+      } else if (step === 8) {
+        setBossMove("VIOLET SPIRAL");
+        spiralGate();
+        if (boss.phase >= 2) scatterSpray();
+      } else if (step === 10 && boss.phase >= 1) {
+        setBossMove("BURST BOMB");
+        spawnBurstBomb();
+      } else if (step === 12) {
+        setBossMove("WHITE SNIPER");
+        sniperFan();
+      } else if (step === 14 && boss.phase >= 2) {
+        setBossMove("CROSS BEAT");
+        bossCross();
+        if (difficulty > 1.1) chargeWallLaser((boss.phase + step) % 4);
+      } else if (step % 2 === 1 && Math.random() < 0.25 + boss.phase * 0.08) {
+        bossNeedles();
+      }
+      boss.rhythmStep += 1;
+    }
+
+    function updateRhythm(dt) {
+      beatClock -= dt;
+      beatPulse = Math.max(0, beatPulse - dt * 2.8);
+      if (beatClock <= 0) {
+        beatClock += BEAT;
+        beatPulse = 1;
+        beatIndex += 1;
+        if (boss.alive && mode === "bullet" && !gameOver && boss.groggyTimer <= 0 && boss.phaseShiftTimer <= 0) {
+          boss.pulse += 0.18;
+          bossRhythmAttack();
+        }
+      }
+    }
+
+    function updatePatterns(dt) {
+      if (boss.groggyTimer > 0 || boss.phaseShiftTimer > 0) return;
+      patternClock -= dt;
+      if (patternClock > 0) return;
+      if (runStage === 2) {
+        scatterSpray();
+        spawnBurstBomb();
+        if (Math.random() < 0.72) chargeWallLaserGrid();
+        if (Math.random() < 0.65) bossRing();
+        if (Math.random() < 0.55) sniperFan();
+        patternClock = Math.max(BEAT * 0.85, BEAT * (2.25 - Math.min(1.2, time / 90))) * diff().pattern;
+        return;
+      }
+      if (difficulty > 0.7) aimedBurst();
+      if (difficulty > 1.0 && Math.random() < 0.38 + boss.phase * 0.07) scatterSpray();
+      if (difficulty > 1.2 && Math.random() < 0.32 + boss.phase * 0.06) spawnBurstBomb();
+      if (difficulty > 1.35 && Math.random() < 0.45 + boss.phase * 0.08) bossOuterCurtain();
+      if (difficulty > 1.7 && boss.phase >= 2 && Math.random() < 0.22) chargeWallLaserGrid();
+      patternClock = Math.max(BEAT * 1.75, BEAT * (4.8 - difficulty * 0.72 - boss.phase * 0.18)) * diff().pattern;
+    }
+
+    function updateBoss(dt) {
+      if (!boss.alive) return;
+      difficulty = runStage === 2 ? Math.max(3.6, time / 20) : Math.min(3.0, time / 58);
+      const ratio = boss.hp / boss.maxHp;
+      const hpPhase = ratio < PHASE_THRESHOLDS[2] ? 3 : ratio < PHASE_THRESHOLDS[1] ? 2 : ratio < PHASE_THRESHOLDS[0] ? 1 : 0;
+      boss.phase = runStage === 2 ? 3 : hpPhase;
+      if (boss.phase !== boss.lastPhase) {
+        boss.lastPhase = boss.phase;
+        setBossMove(`PHASE ${boss.phase + 1} - BRACE`);
+        triggerPhaseShift();
+      }
+      boss.pulse += dt;
+      boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+      boss.hurtPulse = Math.max(0, boss.hurtPulse - dt * 7);
+      boss.breakFlash = Math.max(0, boss.breakFlash - dt * 2.4);
+      boss.exposedTimer = Math.max(0, boss.exposedTimer - dt);
+      boss.phaseShiftTimer = Math.max(0, boss.phaseShiftTimer - dt);
+      boss.hitKickX *= Math.pow(0.001, dt);
+      boss.hitKickY *= Math.pow(0.001, dt);
+      boss.x = width / 2 + Math.sin(time * (0.65 + boss.phase * 0.22)) * Math.min(150 + boss.phase * 18, width * 0.24);
+      boss.y = Math.max(90, height * 0.2) + Math.sin(time * (1.3 + boss.phase * 0.18)) * (14 + boss.phase * 4);
+      if (boss.groggyTimer > 0) {
+        boss.groggyTimer = Math.max(0, boss.groggyTimer - dt);
+        boss.hitFlash = Math.max(boss.hitFlash, 0.04);
+        if (boss.groggyTimer <= 0) {
+          setBossMove("RECOVERED");
+          boss.laserClock = Math.max(boss.laserClock, 2.6);
+          patternClock = Math.max(patternClock, BEAT * 1.5);
+          playSound("phase");
+        }
+        return;
+      }
+      if (boss.phaseShiftTimer > 0) {
+        boss.hitFlash = Math.max(boss.hitFlash, 0.06);
+        return;
+      }
+      boss.laserClock -= dt;
+      if (boss.laserClock <= 0) {
+        if (boss.phase >= 3 || difficulty > 2.0) chargeWallLaserGrid();
+        else if (boss.phase >= 2 || difficulty > 1.2) chargeWallLaser();
+        else chargeLaser();
+        boss.laserClock = Math.max(2.05, 5.8 - boss.phase * 0.72 - difficulty * 0.45) + Math.random() * 0.8;
+      }
+    }
+
+    function updatePlayer(dt) {
+      const move = keyVector();
+      const powered = player.powerTimer > 0;
+      const slowFactor = player.slowTimer > 0 ? 0.78 : 1;
+      const chargeFactor = player.charging ? 0.72 : 1;
+      const knockbackFactor = player.knockbackTimer > 0 ? 0.35 : 1;
+      const accel = (player.dashTime > 0 ? 720 : powered ? 2150 : 1850) * slowFactor * chargeFactor * knockbackFactor;
+      const maxSpeed = (player.knockbackTimer > 0 ? 860 : player.dashTime > 0 ? 900 : powered ? 500 : 430) * slowFactor * chargeFactor;
+      player.vx += move.x * accel * dt;
+      player.vy += move.y * accel * dt;
+      if (move.active) player.angle = Math.atan2(move.y, move.x);
+
+      const drag = Math.pow(player.dashTime > 0 ? 0.045 : 0.006, dt);
+      player.vx *= drag;
+      player.vy *= drag;
+      const speedSq = player.vx * player.vx + player.vy * player.vy;
+      const maxSpeedSq = maxSpeed * maxSpeed;
+      if (speedSq > maxSpeedSq) {
+        const scale = maxSpeed / Math.sqrt(speedSq);
+        player.vx *= scale;
+        player.vy *= scale;
+      }
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      player.x = Math.max(20, Math.min(width - 20, player.x));
+      player.y = Math.max(20, Math.min(height - 20, player.y));
+      player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+      player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + player.dashRegen * dt);
+      player.dashTime = Math.max(0, player.dashTime - dt);
+      player.dashBossCooldown = Math.max(0, player.dashBossCooldown - dt);
+      player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+      player.attackTime = Math.max(0, player.attackTime - dt);
+      player.shotCooldown = Math.max(0, player.shotCooldown - dt);
+      player.slowTimer = Math.max(0, player.slowTimer - dt);
+      player.powerTimer = Math.max(0, player.powerTimer - dt);
+      player.shotTimer = Math.max(0, player.shotTimer - dt);
+      player.knockbackTimer = Math.max(0, player.knockbackTimer - dt);
+      player.dashChainTimer = Math.max(0, player.dashChainTimer - dt);
+      if (player.dashChainTimer <= 0) player.dashChain = 0;
+      if (player.charging && player.shotCooldown <= 0) {
+        const chargeRate = (player.shotTimer > 0 ? 1.45 : 1) + upgrades.shot * 0.18;
+        player.charge = Math.min(1.35, player.charge + dt * chargeRate);
+        player.vx *= Math.pow(0.12, dt);
+        player.vy *= Math.pow(0.12, dt);
+      }
+      player.invuln = Math.max(0, player.invuln - dt);
+
+      if (player.dashTime > 0 && trails.length < 70 && Math.floor(time * 90) % 2 === 0) {
+        trails.push({
+          x: player.x,
+          y: player.y,
+          angle: player.angle,
+          life: 0.18,
+          max: 0.18,
+          tilt: Math.sin(time * 80) * 0.03
+        });
+      }
+    }
+
+    function endGame() {
+      if (gameOver) return;
+      player.alive = false;
+      gameOver = true;
+      paused = false;
+      mode = "bullet";
+      finalWarningTimer = 0;
+      warningPulse = 0;
+      warningSirenClock = 0;
+      hitStop = 0;
+      player.charging = false;
+      keys.clear();
+      bullets.length = 0;
+      warnings.length = 0;
+      lasers.length = 0;
+      pendingSnipes.length = 0;
+      shots.length = 0;
+      stopBgm();
+      highScore = Math.max(highScore, Math.floor(score));
+      localStorage.setItem("blueTiltHighScore", String(highScore));
+      overlay.classList.add("visible");
+      overlayTitle.textContent = "SYSTEM FAILURE";
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+      overlayLine1.textContent = "AI 코어가 방어망을 재구성했습니다. 침투 프로그램이 강제 종료되었습니다.";
+      overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
+      overlayLine3.textContent = "Space를 눌러 재침투";
+      shake = 16;
+      playSound("hurt");
+      for (let i = 0; i < 45; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 70 + Math.random() * 430;
+        sparks.push({ x: player.x, y: player.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.7, max: 0.7, color: i % 2 ? "#43d9ff" : "#ff4c78" });
+      }
+    }
+
+    function winGame() {
+      boss.alive = false;
+      player.alive = false;
+      gameOver = true;
+      stopBgm();
+      score += 2500;
+      highScore = Math.max(highScore, Math.floor(score));
+      localStorage.setItem("blueTiltHighScore", String(highScore));
+      overlay.classList.add("visible");
+      overlayTitle.textContent = "CORE SHUTDOWN";
+      difficultySelect.classList.add("hidden");
+      pauseControls.classList.add("hidden");
+      overlayLine1.textContent = "폭주한 AI 프로그램의 제어권을 회수했습니다. 시스템은 아직 불안정하지만, 핵심 코어는 정지되었습니다.";
+      overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
+      overlayLine3.textContent = "Space를 눌러 다시 실행";
+      shake = 18;
+      playSound("win");
+      for (let i = 0; i < 90; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 80 + Math.random() * 520;
+        sparks.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.9, max: 0.9, color: i % 3 ? "#43d9ff" : "#ffd66b" });
+      }
+    }
+
+    function updateWorld(dt) {
+      trimEffectLists();
+
+      if (boss.alive && player.alive) {
+        const rr = boss.r + player.r * 0.8;
+        if (distSq(player.x, player.y, boss.x, boss.y) < rr * rr) {
+          if (player.dashTime > 0) {
+            dashHitBoss();
+          } else if (player.invuln <= 0 && boss.groggyTimer <= 0) {
+            takeHit();
+            return;
+          }
+        }
+      }
+
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const laser = lasers[i];
+        laser.life -= dt;
+        const nowFire = laser.life <= laser.fire + 0.18 && laser.life > 0.18;
+        const justBeforeFire = laser.life <= laser.fire + 0.34 && laser.life > laser.fire + 0.18;
+        if (!laser.fired && nowFire) {
+          laser.fired = true;
+          setBossMove("LASER BREAK");
+          shake = Math.max(shake, 12);
+          playSound("laserFire");
+        }
+        if (player.alive && player.dashTime > 0 && !laser.grazed && (nowFire || justBeforeFire)) {
+          const dist = distanceToSegment(player.x, player.y, laser.x1, laser.y1, laser.x2, laser.y2);
+          if (dist < laser.width * 0.48 + player.r + (justBeforeFire ? 34 : 24)) {
+            awardLaserDashBreak(laser, justBeforeFire ? "JUST" : "LASER DASH");
+          }
+        }
+        if (player.alive && player.invuln <= 0 && nowFire) {
+          const dist = distanceToSegment(player.x, player.y, laser.x1, laser.y1, laser.x2, laser.y2);
+          if (dist < laser.width * 0.48 + player.r * 0.5) {
+            takeHit();
+            return;
+          }
+        }
+        if (laser.life <= 0) lasers.splice(i, 1);
+      }
+
+      for (let i = pendingSnipes.length - 1; i >= 0; i--) {
+        const snipe = pendingSnipes[i];
+        snipe.timer -= dt;
+        if (snipe.timer <= snipe.exposedAt) {
+          boss.exposedTimer = Math.max(boss.exposedTimer, snipe.timer + 0.08);
+        }
+        if (snipe.timer <= 0) {
+          for (let j = -3; j <= 3; j++) {
+            const a = snipe.angle + j * 0.055;
+            spawnBullet(snipe.x, snipe.y, Math.cos(a) * 345, Math.sin(a) * 345, 7, "#ffffff", 0, { kind: "sniper" });
+          }
+          spawnWarning(snipe.x, snipe.y, snipe.targetX, snipe.targetY, "#ffffff");
+          playSound("laserFire");
+          pendingSnipes.splice(i, 1);
+        }
+      }
+
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.age += dt;
+        const wob = b.wobble ? Math.sin(b.age * 8) * b.wobble * 80 : 0;
+        b.x += (b.vx + Math.sin(b.age * 5) * wob) * dt;
+        b.y += (b.vy + Math.cos(b.age * 4) * wob) * dt;
+        if (b.splitTime && b.age >= b.splitTime) {
+          const colors = bossPalette();
+          const count = b.splitCount || 14;
+          for (let j = 0; j < count; j++) {
+            const a = j * Math.PI * 2 / count + Math.random() * 0.16;
+            const speed = 130 + Math.random() * 145 + boss.phase * 16;
+            spawnBullet(b.x, b.y, Math.cos(a) * speed, Math.sin(a) * speed, 4.2, colors.bullet, boss.phase >= 2 ? 0.18 : 0);
+          }
+          for (let j = 0; j < 12; j++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 80 + Math.random() * 220;
+            sparks.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.35, max: 0.35, color: colors.warn });
+          }
+          shake = Math.max(shake, 5);
+          bullets.splice(i, 1);
+          continue;
+        }
+        if (b.x < -120 || b.x > width + 120 || b.y < -120 || b.y > height + 120) {
+          bullets.splice(i, 1);
+          continue;
+        }
+        if (player.alive && player.dashTime > 0 && b.kind !== "burstBomb") {
+          const dashCutR = b.r + player.r + 18 + Math.min(12, player.dashChain * 0.8);
+          if (distSq(b.x, b.y, player.x, player.y) < dashCutR * dashCutR) {
+            dashCutBullet(b, player.dashChain + 1);
+            bullets.splice(i, 1);
+            registerClears(1, b.x, b.y);
+            continue;
+          }
+        }
+        const hitR = b.r + player.r * 0.55;
+        if (player.alive && player.invuln <= 0 && distSq(b.x, b.y, player.x, player.y) < hitR * hitR) {
+          takeHit();
+          return;
+        }
+      }
+
+      for (let i = shots.length - 1; i >= 0; i--) {
+        const shot = shots[i];
+        shot.life -= dt;
+        if (boss.alive && shot.homing > 0) {
+          const desired = Math.atan2(boss.y - shot.y, boss.x - shot.x);
+          const current = Math.atan2(shot.vy, shot.vx);
+          const turn = Math.atan2(Math.sin(desired - current), Math.cos(desired - current)) * shot.homing;
+          const speed = Math.sqrt(shot.vx * shot.vx + shot.vy * shot.vy);
+          const next = current + turn;
+          shot.vx = Math.cos(next) * speed;
+          shot.vy = Math.sin(next) * speed;
+        }
+        shot.x += shot.vx * dt;
+        shot.y += shot.vy * dt;
+        shot.scanClock -= dt;
+        let cleared = 0;
+        if (shot.scanClock <= 0) {
+          shot.scanClock = 0.06;
+          cleared = clearNearbyBullets(shot.x, shot.y, shot.r + 7, true, Math.max(0, Math.min(4, shot.pierce)));
+        }
+        if (cleared > 0) shot.pierce -= cleared;
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          if (b.kind !== "burstBomb" || !b.breakable) continue;
+          const rr = b.r + shot.r + 4;
+          if (distSq(shot.x, shot.y, b.x, b.y) < rr * rr) {
+            bullets.splice(j, 1);
+            breakBurstBomb(b, shot.charged ? "CHARGE" : "SHOT");
+            shot.pierce -= shot.charged ? 1 : 2;
+            break;
+          }
+        }
+        const bossHitR = boss.r + shot.r;
+        if (boss.alive && distSq(shot.x, shot.y, boss.x, boss.y) < bossHitR * bossHitR) {
+          score += 140 + shot.damage * 4;
+          cancelSniperWithShot(shot);
+          bossTakeDamage(shot.damage, shot.x, shot.y, Math.min(2.4, 0.85 + shot.r / 18), `${shot.damage}`);
+          shot.pierce -= 2;
+        }
+        if (shot.life <= 0 || shot.pierce <= 0 || shot.x < -80 || shot.x > width + 80 || shot.y < -80 || shot.y > height + 80) {
+          shots.splice(i, 1);
+        }
+      }
+
+      for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        item.age += dt;
+        item.life -= dt;
+        item.vx *= Math.pow(0.55, dt);
+        item.vy += Math.sin(item.age * 2.6 + item.bob) * 9 * dt;
+        item.x += item.vx * dt;
+        item.y += item.vy * dt;
+        if (item.x < 28 || item.x > width - 28) item.vx *= -0.8;
+        if (item.y < 70 || item.y > height - 38) item.vy *= -0.8;
+        item.x = Math.max(28, Math.min(width - 28, item.x));
+        item.y = Math.max(70, Math.min(height - 38, item.y));
+        const pickupR = item.r + player.r + 8;
+        if (player.alive && distSq(item.x, item.y, player.x, player.y) < pickupR * pickupR) {
+          applyItem(item.type);
+          items.splice(i, 1);
+          continue;
+        }
+        if (item.life <= 0) items.splice(i, 1);
+      }
+
+      for (let i = trails.length - 1; i >= 0; i--) {
+        trails[i].life -= dt;
+        if (trails[i].life <= 0) trails.splice(i, 1);
+      }
+      for (let i = warnings.length - 1; i >= 0; i--) {
+        warnings[i].life -= dt;
+        if (warnings[i].life <= 0) warnings.splice(i, 1);
+      }
+      for (let i = slashes.length - 1; i >= 0; i--) {
+        slashes[i].life -= dt;
+        if (slashes[i].life <= 0) slashes.splice(i, 1);
+      }
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i];
+        s.life -= dt;
+        s.vx *= Math.pow(0.02, dt);
+        s.vy *= Math.pow(0.02, dt);
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        if (s.life <= 0) sparks.splice(i, 1);
+      }
+      for (let i = impactRings.length - 1; i >= 0; i--) {
+        const ring = impactRings[i];
+        ring.life -= dt;
+        ring.radius += dt * 155;
+        if (ring.life <= 0) impactRings.splice(i, 1);
+      }
+      for (let i = popups.length - 1; i >= 0; i--) {
+        const p = popups[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 38 * dt;
+        if (p.life <= 0) popups.splice(i, 1);
+      }
+      shake = Math.max(0, shake - dt * 30);
+    }
+
+    function drawGrid() {
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.strokeStyle = "#1d4051";
+      ctx.lineWidth = 1;
+      const size = 42;
+      const ox = (time * -45) % size;
+      const oy = (time * -28) % size;
+      for (let x = ox; x < width; x += size) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = oy; y < height; y += size) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPlayerLike(x, y, angle, alpha, scale, tilt) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle + tilt);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#43d9ff";
+      ctx.fillStyle = "#43d9ff";
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-11, -11);
+      ctx.lineTo(-6, 0);
+      ctx.lineTo(-11, 11);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#e9f4ff";
+      ctx.beginPath();
+      ctx.arc(-1, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function itemVisual(type) {
+      if (type === "blade") return { label: "B", color: "#43d9ff", name: "BLADE" };
+      if (type === "barrier") return { label: "O", color: "#ffd66b", name: "BARRIER" };
+      if (type === "bomb") return { label: "X", color: "#ff4c78", name: "BOMB" };
+      return { label: "A", color: "#a77cff", name: "OVERCLOCK" };
+    }
+
+    function drawBoss() {
+      if (!boss.alive && boss.hp <= 0) return;
+      const colors = bossPalette();
+      ctx.save();
+      ctx.translate(boss.x + boss.hitKickX, boss.y + boss.hitKickY);
+      const groggyPulse = boss.groggyTimer > 0 ? 0.16 + Math.sin(time * 14) * 0.04 : 0;
+      const exposedPulse = boss.exposedTimer > 0 ? 0.12 + Math.sin(time * 24) * 0.05 : 0;
+      const phasePulse = boss.phaseShiftTimer > 0 ? 0.22 + Math.sin(time * 20) * 0.07 : 0;
+      const pulse = 1 + Math.sin(boss.pulse * 8) * 0.05 + boss.hurtPulse * 0.13 + groggyPulse + exposedPulse + phasePulse;
+      ctx.scale(pulse, pulse);
+      ctx.shadowBlur = boss.hitFlash > 0 || boss.groggyTimer > 0 || boss.phaseShiftTimer > 0 ? 28 : 10;
+      ctx.shadowColor = boss.phaseShiftTimer > 0 ? "#ffffff" : boss.groggyTimer > 0 ? "#ffd66b" : boss.exposedTimer > 0 ? "#ffffff" : boss.hitFlash > 0 ? "#ffffff" : colors.core;
+      ctx.fillStyle = boss.phaseShiftTimer > 0 ? "#ffffff" : boss.groggyTimer > 0 ? "#ffd66b" : boss.exposedTimer > 0 ? "#ffffff" : boss.hitFlash > 0 ? "#ffffff" : colors.core;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = Math.PI * 2 * i / 8 + time * 0.8;
+        const r = boss.r * (i % 2 ? 0.76 : 1.08);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.32;
+      ctx.strokeStyle = boss.phaseShiftTimer > 0 ? "#ffffff" : boss.groggyTimer > 0 ? "#ffd66b" : boss.exposedTimer > 0 ? "#ffffff" : colors.warn;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, boss.r + 12 + Math.sin(time * 5) * 4, 0, Math.PI * 2);
+      ctx.stroke();
+      if (boss.hurtPulse > 0) {
+        ctx.globalAlpha = boss.hurtPulse * 0.55;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2 + boss.hurtPulse * 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, boss.r + 24 + (1 - boss.hurtPulse) * 38, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (boss.groggyTimer > 0 || boss.exposedTimer > 0 || boss.phaseShiftTimer > 0) {
+        ctx.globalAlpha = boss.phaseShiftTimer > 0 ? 0.78 : boss.groggyTimer > 0 ? 0.65 : 0.52;
+        ctx.strokeStyle = boss.phaseShiftTimer > 0 ? colors.warn : boss.groggyTimer > 0 ? "#ffd66b" : "#ffffff";
+        ctx.lineWidth = boss.phaseShiftTimer > 0 ? 6 : boss.groggyTimer > 0 ? 5 : 3;
+        ctx.setLineDash([10, 8]);
+        ctx.beginPath();
+        ctx.arc(0, 0, boss.r + 34 + Math.sin(time * 10) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawRhythmCue() {
+      if (!boss.alive || mode !== "bullet") return;
+      const colors = bossPalette();
+      const ring = 44 + (1 - beatPulse) * 78;
+      ctx.save();
+      ctx.globalAlpha = 0.12 + beatPulse * 0.52;
+      ctx.strokeStyle = colors.warn;
+      ctx.lineWidth = 2 + beatPulse * 5;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = colors.warn;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, ring, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const next = Math.max(0, Math.min(1, 1 - beatClock / BEAT));
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r + 24, -Math.PI / 2, -Math.PI / 2 + next * Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.62 + beatPulse * 0.28;
+      ctx.fillStyle = "#e9f4ff";
+      ctx.font = "700 12px Arial, Helvetica, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(boss.attackName, boss.x, boss.y - boss.r - 34);
+      ctx.restore();
+    }
+
+    function renderGame() {
+      if (canvas.style.display === "none") return;
+      ctx.save();
+      ctx.clearRect(0, 0, width, height);
+      const renderShake = mode === "upgrade" ? 0 : shake;
+      const sx = renderShake ? (Math.random() - 0.5) * renderShake : 0;
+      const sy = renderShake ? (Math.random() - 0.5) * renderShake : 0;
+      ctx.translate(sx, sy);
+
+      drawGrid();
+
+      drawRhythmCue();
+      drawBoss();
+
+      for (const laser of lasers) {
+        const firing = laser.life <= laser.fire + 0.18 && laser.life > 0.18;
+        const chargeLeft = Math.max(0, laser.life - laser.fire - 0.18);
+        const chargeRatio = laser.charge ? 1 - Math.min(1, chargeLeft / laser.charge) : 1;
+        ctx.save();
+        ctx.strokeStyle = laser.color;
+        ctx.lineCap = "round";
+        ctx.shadowColor = laser.color;
+        if (firing) {
+          ctx.globalAlpha = 0.82;
+          ctx.lineWidth = laser.width;
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.moveTo(laser.x1, laser.y1);
+          ctx.lineTo(laser.x2, laser.y2);
+          ctx.stroke();
+          ctx.globalAlpha = 0.95;
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = Math.max(4, laser.width * 0.28);
+          ctx.beginPath();
+          ctx.moveTo(laser.x1, laser.y1);
+          ctx.lineTo(laser.x2, laser.y2);
+          ctx.stroke();
+        } else {
+          ctx.globalAlpha = 0.18 + chargeRatio * 0.48;
+          ctx.lineWidth = 2 + chargeRatio * 5;
+          ctx.setLineDash([16 - chargeRatio * 8, 12]);
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.moveTo(laser.x1, laser.y1);
+          ctx.lineTo(laser.x2, laser.y2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      for (const w of warnings) {
+        const t = w.life / w.max;
+        ctx.save();
+        ctx.globalAlpha = t * 0.33;
+        ctx.strokeStyle = w.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 10]);
+        ctx.beginPath();
+        ctx.moveTo(w.x1, w.y1);
+        ctx.lineTo(w.x2, w.y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const snipe of pendingSnipes) {
+        const charge = 1 - Math.max(0, snipe.timer / snipe.max);
+        const exposed = snipe.timer <= snipe.exposedAt;
+        ctx.save();
+        ctx.globalAlpha = exposed ? 0.82 : 0.28 + charge * 0.38;
+        ctx.strokeStyle = exposed ? "#ffffff" : "#ff4c78";
+        ctx.lineWidth = exposed ? 4 : 2;
+        ctx.shadowBlur = exposed ? 14 : 6;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.setLineDash(exposed ? [] : [12, 10]);
+        ctx.beginPath();
+        ctx.moveTo(snipe.x, snipe.y);
+        ctx.lineTo(snipe.targetX, snipe.targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(snipe.x, snipe.y, 16 + charge * 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const item of items) {
+        const visual = itemVisual(item.type);
+        const bob = Math.sin(item.age * 4 + item.bob) * 5;
+        const fade = Math.min(1, item.life / 1.5);
+        ctx.save();
+        ctx.translate(item.x, item.y + bob);
+        ctx.globalAlpha = Math.max(0.25, fade);
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = visual.color;
+        ctx.fillStyle = visual.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, item.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#071018";
+        ctx.font = "700 13px Arial, Helvetica, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(visual.label, 0, 1);
+        ctx.restore();
+      }
+
+      for (const t of trails) {
+        const a = Math.max(0, t.life / t.max);
+        drawPlayerLike(t.x, t.y, t.angle, a * 0.42, 1 + (1 - a) * 0.35, t.tilt);
+      }
+
+      for (const b of bullets) {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.25;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      for (const shot of shots) {
+        ctx.fillStyle = shot.color;
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.28;
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, shot.r * 2.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      for (const slashMark of slashes) {
+        const a = slashMark.life / slashMark.max;
+        ctx.save();
+        ctx.translate(slashMark.x, slashMark.y);
+        ctx.rotate(slashMark.angle);
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = "#e9f4ff";
+        ctx.lineWidth = 6;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#43d9ff";
+        ctx.beginPath();
+        ctx.arc(0, 0, slashMark.range, -0.52, 0.52);
+        ctx.stroke();
+        ctx.strokeStyle = "#43d9ff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, slashMark.range * 0.72, -0.42, 0.42);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const ring of impactRings) {
+        const a = Math.max(0, ring.life / ring.max);
+        ctx.save();
+        ctx.globalAlpha = a * 0.75;
+        ctx.strokeStyle = ring.color;
+        ctx.lineWidth = Math.max(1, ring.width * a);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = ring.color;
+        ctx.beginPath();
+        ctx.arc(ring.x, ring.y, ring.radius + (1 - a) * 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const s of sparks) {
+        const a = s.life / s.max;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x - s.vx * 0.035, s.y - s.vy * 0.035);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (player.alive) {
+        const tilt = player.dashTime > 0 ? Math.sin(time * 90) * 0.08 : 0;
+        if (player.charging && player.charge > 0) {
+          const chargeRatio = Math.min(1, player.charge / 1.15);
+          ctx.save();
+          ctx.globalAlpha = 0.3 + chargeRatio * 0.45;
+          ctx.strokeStyle = player.shotTimer > 0 ? "#a77cff" : "#43d9ff";
+          ctx.lineWidth = 2 + chargeRatio * 4;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 22 + chargeRatio * 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(player.x, player.y);
+          ctx.lineTo(player.x + Math.cos(player.angle) * (90 + chargeRatio * 55), player.y + Math.sin(player.angle) * (90 + chargeRatio * 55));
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (player.shield > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.25 + Math.sin(time * 8) * 0.08;
+          ctx.strokeStyle = "#ffd66b";
+          ctx.lineWidth = 3;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "#ffd66b";
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 25 + player.shield * 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        drawPlayerLike(player.x, player.y, player.angle, player.invuln > 0 ? 0.72 : 1, 1, tilt);
+      }
+
+      for (const p of popups) {
+        const a = Math.max(0, p.life / p.max);
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, a * 1.45);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.font = `700 ${p.size + (1 - a) * 4}px Arial, Helvetica, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(p.text, p.x, p.y);
+        ctx.restore();
+      }
+
+      if (mode === "finalWarning" || runStage === 2) {
+        ctx.save();
+        ctx.globalAlpha = mode === "finalWarning" ? 0.18 + warningPulse * 0.22 : 0.06;
+        ctx.fillStyle = "#ff1f46";
+        ctx.fillRect(-20, -20, width + 40, height + 40);
+        ctx.globalAlpha = mode === "finalWarning" ? 0.28 + warningPulse * 0.3 : 0.08;
+        ctx.strokeStyle = "#ff4c78";
+        ctx.lineWidth = 3 + warningPulse * 4;
+        ctx.strokeRect(14, 14, width - 28, height - 28);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function loop(now) {
+      try {
+        const dt = Math.min(Math.max((now - last) / 1000, 0), 0.033);
+        last = now;
+        if (hitStop > 0 && hasActiveDangerTelegraph() && !gameOver) {
+          hitStop = Math.max(0, hitStop - dt);
+          updateDangerTelegraphsOnly(dt);
+        } else if (hitStop > 0) {
+          hitStop = Math.max(0, hitStop - dt);
+        } else if (mode === "finalWarning" && !gameOver) {
+          hitStop = Math.max(0, hitStop - dt);
+          time += dt;
+          finalWarningTimer = Math.max(0, finalWarningTimer - dt);
+          warningPulse = Math.max(0, warningPulse - dt * 2.2);
+          warningSirenClock -= dt;
+          if (warningSirenClock <= 0) {
+            warningSirenClock = 0.62;
+            warningPulse = 1;
+            shake = Math.max(shake, 12 + (FINAL_WARNING_DURATION - finalWarningTimer) * 2.4);
+            playSound("siren");
+            overlayTitle.textContent = finalWarningTimer > 1.7 ? "- WARNING -" : "- FINAL CORE -";
+            overlayLine1.textContent = finalWarningTimer > 1.7 ? "위험도 상승. 최종 패턴 진입." : "방어막 해제. 접근 금지.";
+          }
+          updateWorld(dt);
+          if (finalWarningTimer <= 0) startFinalBoss();
+        } else if (paused) {
+          // Keep rendering the current frame without advancing combat state.
+        } else if (mode === "bullet" && started && !gameOver) {
+          hitStop = Math.max(0, hitStop - dt);
+          time += dt;
+          score += dt * 100 + bullets.length * dt * 0.4;
+          updateRhythm(dt);
+          updateBoss(dt);
+          updatePatterns(dt);
+          updatePlayer(dt);
+          updateWorld(dt);
+        } else {
+          updateWorld(dt);
+        }
+        trimEffectLists();
+        hudClock -= dt;
+        if (hudClock <= 0) {
+          hudClock = 0.08;
+          const dashRatio = player.dashMax ? player.dashEnergy / player.dashMax : 0;
+          const attackMax = player.powerTimer > 0 ? 0.22 : 0.32;
+          const attackRatio = player.attackCooldown <= 0 ? 1 : 1 - player.attackCooldown / attackMax;
+          const bossRatio = boss.maxHp ? boss.hp / boss.maxHp : 0;
+          dashFill.style.transform = `scaleX(${Math.max(0, Math.min(1, dashRatio))})`;
+          dashText.textContent = player.dashEnergy >= player.dashCost ? `${Math.round(Math.max(0, Math.min(1, dashRatio)) * 100)}%` : "RELOAD";
+          attackFill.style.transform = `scaleX(${Math.max(0, Math.min(1, attackRatio))})`;
+          attackText.textContent = player.attackCooldown <= 0 ? "READY" : "RECOVER";
+          bossFill.style.transform = `scaleX(${Math.max(0, Math.min(1, bossRatio))})`;
+          bossFill.style.background = boss.groggyTimer > 0 ? "linear-gradient(90deg, #ffd66b, #ffffff)" : `linear-gradient(90deg, ${bossPalette().core}, ${bossPalette().warn})`;
+          bossText.textContent = `${Math.ceil(Math.max(0, bossRatio) * 100)}%`;
+          const breakRatio = boss.groggyTimer > 0 ? 1 : boss.breakValue / 100;
+          breakFill.style.transform = `scaleX(${Math.max(0, Math.min(1, breakRatio))})`;
+          breakFill.style.background = boss.groggyTimer > 0 ? "linear-gradient(90deg, #ffd66b, #ffffff)" : boss.breakFlash > 0 ? "linear-gradient(90deg, #ffffff, #43d9ff, #ffd66b)" : "linear-gradient(90deg, #e9f4ff, #43d9ff, #ffd66b)";
+          breakText.textContent = boss.groggyTimer > 0 ? `GROGGY ${boss.groggyTimer.toFixed(1)}s` : `${Math.floor(boss.breakValue)}%`;
+          const statuses = [];
+          if (boss.phaseShiftTimer > 0) statuses.push(`PHASE SHIFT ${boss.phaseShiftTimer.toFixed(1)}s`);
+          if (boss.groggyTimer > 0) statuses.push(`GROGGY DAMAGE UP ${boss.groggyTimer.toFixed(1)}s`);
+          if (player.powerTimer > 0) statuses.push(`BLADE ${player.powerTimer.toFixed(1)}s`);
+          if (player.shotTimer > 0) statuses.push(`SHOT+ ${player.shotTimer.toFixed(1)}s`);
+          if (player.shield > 0) statuses.push(`BARRIER x${player.shield}`);
+          if (player.charging) statuses.push(`CHARGE ${Math.round(Math.min(1, player.charge / 1.15) * 100)}%`);
+          if (player.slowTimer > 0) statuses.push(`SLOW ${player.slowTimer.toFixed(1)}s`);
+          if (player.dashChainTimer > 0 && player.dashChain > 0) statuses.push(`DASH x${player.dashChain}`);
+          if (player.upgrades.length) statuses.push(`UPGRADES ${player.upgrades.slice(-4).join("/")}`);
+        statuses.push(`난이도 ${diff().label}`);
+          statuses.push(`TEMPO x${(1 + difficulty * 0.25).toFixed(1)}`);
+          statuses.push(`DROP ${clearBank}/10 ${Math.round(nextDropChance * 100)}%`);
+          itemText.textContent = `ITEMS: ${statuses.join(" | ")}`;
+          scoreText.textContent = `${Math.floor(score)} / BEST ${highScore}`;
+        }
+        renderGame();
+      } catch (err) {
+        console.error("Blue Tilt Dash loop error:", err);
+      } finally {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    window.addEventListener("resize", resize);
+    difficultySelect.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-difficulty]");
+      if (!button || mode !== "intro") return;
+      chooseIntroDifficulty(button.dataset.difficulty);
+    });
+    pauseDifficultySelect.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-difficulty]");
+      if (!button || !paused || mode !== "bullet") return;
+      choosePauseDifficulty(button.dataset.difficulty);
+    });
+    restartWithDifficulty.addEventListener("click", restartFromPause);
+
+    window.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "a", "s", "d", "p", "escape", "1", "2", "3"].includes(key)) event.preventDefault();
+
+      if (mode === "intro") {
+        if (introReady) resetGame();
+        return;
+      }
+      if (mode === "upgrade") {
+        applyUpgradeChoice(key);
+        return;
+      }
+      if (gameOver && key === " ") {
+        resetGame();
+        return;
+      }
+      if (key === "p" || key === "escape") {
+        togglePause();
+        return;
+      }
+      if (paused) return;
+      if (key === "a") dash();
+      if (key === "s") slash();
+      if (key === "d" && !event.repeat && mode === "bullet" && player.shotCooldown <= 0) {
+        player.charging = true;
+        player.charge = 0;
+      }
+      keys.add(key);
+    });
+
+    window.addEventListener("keyup", (event) => {
+      const key = event.key.toLowerCase();
+      if (paused) {
+        keys.delete(key);
+        return;
+      }
+      if (key === "d") fireChargedShot();
+      keys.delete(key);
+    });
+
+    volumeSlider.addEventListener("input", () => {
+      setVolume(Number(volumeSlider.value));
+      localStorage.setItem("blueTiltVolume", String(volumeSlider.value));
+    });
+
+    resize();
+    setVolume(Number(volumeSlider.value));
+    enterBulletIntro();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
