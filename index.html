@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
@@ -16,6 +16,8 @@
       --amber: #ffd66b;
       --violet: #a77cff;
       --field: #071018;
+      --glass: rgba(4, 13, 22, 0.78);
+      --hot: #ff2f6d;
     }
 
     * {
@@ -46,7 +48,10 @@
 
     #game {
       display: none;
-      background: radial-gradient(circle at 50% 45%, #0b1b28 0%, var(--field) 48%, #020407 100%);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(67, 217, 255, 0.13) 0%, transparent 24%),
+        radial-gradient(circle at 50% 72%, rgba(255, 76, 120, 0.09) 0%, transparent 34%),
+        radial-gradient(circle at 50% 45%, #0b1b28 0%, var(--field) 48%, #020407 100%);
       cursor: crosshair;
     }
 
@@ -189,21 +194,40 @@
     }
 
     .panel {
-      max-width: 540px;
-      padding: 22px 24px;
-      border: 1px solid rgba(158, 223, 255, 0.18);
-      background: rgba(2, 8, 13, 0.78);
-      backdrop-filter: blur(14px);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.45);
+      max-width: 640px;
+      padding: 26px 28px 28px;
+      border: 1px solid rgba(158, 223, 255, 0.28);
+      background:
+        linear-gradient(180deg, rgba(67, 217, 255, 0.08), rgba(255, 76, 120, 0.05)),
+        var(--glass);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 22px 90px rgba(0, 0, 0, 0.55), 0 0 36px rgba(67, 217, 255, 0.14);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent, rgba(67, 217, 255, 0.16), transparent),
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 7px);
+      opacity: 0.34;
+      pointer-events: none;
     }
 
     .panel h1 {
+      position: relative;
       margin: 0 0 10px;
       font-size: clamp(28px, 7vw, 54px);
       letter-spacing: 0;
+      color: #f7fbff;
+      text-shadow: 0 0 18px rgba(67, 217, 255, 0.7), 0 0 38px rgba(255, 76, 120, 0.28);
     }
 
     .panel p {
+      position: relative;
       margin: 6px 0;
       color: #b9cad6;
       line-height: 1.55;
@@ -211,6 +235,7 @@
     }
 
     .difficulty-select {
+      position: relative;
       display: flex;
       justify-content: center;
       gap: 10px;
@@ -221,12 +246,14 @@
 
     .difficulty-select button {
       min-width: 92px;
-      min-height: 42px;
+      min-height: 38px;
       border: 1px solid rgba(158, 223, 255, 0.32);
-      background: rgba(67, 217, 255, 0.1);
+      background: linear-gradient(180deg, rgba(67, 217, 255, 0.16), rgba(45, 118, 255, 0.08));
       color: var(--ink);
       font-weight: 700;
+      font-size: 13px;
       cursor: pointer;
+      box-shadow: inset 0 0 14px rgba(67, 217, 255, 0.08), 0 0 18px rgba(0, 0, 0, 0.2);
     }
 
     .difficulty-select button:hover,
@@ -238,12 +265,17 @@
 
     .difficulty-select button.selected {
       border-color: var(--amber);
-      background: rgba(255, 214, 107, 0.18);
+      background: linear-gradient(180deg, rgba(255, 214, 107, 0.26), rgba(255, 76, 120, 0.12));
       color: #fff3a6;
+      box-shadow: 0 0 22px rgba(255, 214, 107, 0.28);
     }
 
     .difficulty-select.hidden {
       display: none;
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .pause-controls {
@@ -258,10 +290,18 @@
     }
 
     .pause-actions {
+      position: relative;
       display: flex;
       justify-content: center;
       gap: 10px;
       flex-wrap: wrap;
+      pointer-events: auto;
+    }
+
+    #introActions {
+      margin-top: 34px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(158, 223, 255, 0.16);
     }
 
     .pause-actions button {
@@ -274,6 +314,13 @@
       cursor: pointer;
     }
 
+    #startGameButton {
+      min-width: 190px;
+      min-height: 54px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
     .pause-actions button:hover,
     .pause-actions button:focus-visible {
       border-color: var(--cyan);
@@ -281,10 +328,18 @@
       outline: none;
     }
 
+    .pause-actions button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      border-color: rgba(158, 223, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .pause-actions .restart {
       border-color: rgba(255, 214, 107, 0.55);
-      background: rgba(255, 214, 107, 0.14);
+      background: linear-gradient(90deg, rgba(255, 214, 107, 0.22), rgba(255, 76, 120, 0.18));
       color: #fff3a6;
+      box-shadow: 0 0 24px rgba(255, 214, 107, 0.18);
     }
 
     .visible {
@@ -308,11 +363,11 @@
     </div>
     <div class="score">
       <div id="scoreText">0</div>
-      <div class="sub">Arrow/IJKL move | A dash | S slash | Hold D shot | ESC/P pause</div>
+      <div class="sub" id="controlHelp">Arrow/IJKL move | A dash | S slash | Hold D shot | ESC/P pause</div>
       <div class="status-line" id="itemText">ITEMS: none</div>
       <label class="volume-control">
         <span>VOL</span>
-        <input id="volumeSlider" type="range" min="0" max="100" value="75" aria-label="Volume">
+        <input id="volumeSlider" type="range" min="0" max="100" value="100" aria-label="Volume">
         <span id="volumeText">55</span>
       </label>
     </div>
@@ -335,11 +390,22 @@
         <button type="button" data-difficulty="NORMAL">보통</button>
         <button type="button" data-difficulty="HARD">어려움</button>
       </div>
+      <div class="difficulty-select" id="controlSelect" aria-label="조작 방식 선택">
+        <button type="button" data-control="mouse">마우스</button>
+        <button type="button" data-control="keyboard">키보드</button>
+      </div>
+      <div class="pause-actions" id="introActions">
+        <button type="button" class="restart" id="startGameButton">게임 시작</button>
+      </div>
       <div class="pause-controls hidden" id="pauseControls">
         <div class="difficulty-select" id="pauseDifficultySelect" aria-label="일시정지 난이도 선택">
           <button type="button" data-difficulty="EASY">쉬움</button>
           <button type="button" data-difficulty="NORMAL">보통</button>
           <button type="button" data-difficulty="HARD">어려움</button>
+        </div>
+        <div class="difficulty-select" id="pauseControlSelect" aria-label="일시정지 조작 방식 선택">
+          <button type="button" data-control="mouse">마우스</button>
+          <button type="button" data-control="keyboard">키보드</button>
         </div>
         <div class="pause-actions">
           <button type="button" class="restart" id="restartWithDifficulty">재설정 후 재시작</button>
@@ -364,6 +430,7 @@
     const bossMove = document.getElementById("bossMove");
     const scoreText = document.getElementById("scoreText");
     const itemText = document.getElementById("itemText");
+    const controlHelp = document.getElementById("controlHelp");
     const volumeSlider = document.getElementById("volumeSlider");
     const volumeText = document.getElementById("volumeText");
     const overlay = document.getElementById("overlay");
@@ -372,15 +439,23 @@
     const overlayLine2 = document.getElementById("overlayLine2");
     const overlayLine3 = document.getElementById("overlayLine3");
     const difficultySelect = document.getElementById("difficultySelect");
+    const controlSelect = document.getElementById("controlSelect");
+    const introActions = document.getElementById("introActions");
+    const startGameButton = document.getElementById("startGameButton");
     const pauseControls = document.getElementById("pauseControls");
     const pauseDifficultySelect = document.getElementById("pauseDifficultySelect");
+    const pauseControlSelect = document.getElementById("pauseControlSelect");
     const restartWithDifficulty = document.getElementById("restartWithDifficulty");
 
     let mode = "intro";
     let paused = false;
-    let difficultyMode = localStorage.getItem("blueTiltDifficulty") || "NORMAL";
+    let difficultyMode = "EASY";
     let pendingDifficultyMode = difficultyMode;
+    let controlMode = "mouse";
+    let pendingControlMode = controlMode || "mouse";
     let introReady = false;
+    let introDifficultyPicked = true;
+    let introControlPicked = true;
     let highScore = Number(localStorage.getItem("blueTiltHighScore") || "0");
     let breakTutorialShown = localStorage.getItem("blueTiltBreakHelp") === "1";
 
@@ -395,19 +470,31 @@
 
     function enterBulletIntro() {
       mode = "intro";
-      introReady = false;
-      if (!difficultySettings[difficultyMode]) difficultyMode = "NORMAL";
+      introReady = true;
+      introDifficultyPicked = true;
+      introControlPicked = true;
+      difficultyMode = "EASY";
+      controlMode = "mouse";
+      pendingDifficultyMode = difficultyMode;
+      pendingControlMode = controlMode;
       canvas.style.display = "block";
       hud.style.display = "flex";
       bossHud.style.display = "none";
       overlay.classList.add("visible");
       overlayTitle.textContent = "BLUE TILT DASH";
-      overlayLine1.textContent = "CREATOR JU_IL";
-      overlayLine2.textContent = "난이도를 선택하세요.";
-      overlayLine3.textContent = "선택 후 설명을 확인하고 아무 키나 누르면 시작합니다.";
+      overlayLine1.textContent = "난이도 쉬움 | 마우스 플레이";
+      overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
+      overlayLine3.textContent = controlHelpText();
+      controlHelp.textContent = controlHelpText();
       difficultySelect.classList.remove("hidden");
+      controlSelect.classList.remove("hidden");
+      introActions.classList.remove("hidden");
       pauseControls.classList.add("hidden");
       updateDifficultyButtons();
+      updateControlButtons();
+      updateIntroStartButton();
+      tryStartIntroAudio();
+      startIntroMusic();
       resize();
     }
 
@@ -420,28 +507,92 @@
       }
     }
 
+    function updateControlButtons() {
+      for (const button of controlSelect.querySelectorAll("button")) {
+        button.classList.toggle("selected", button.dataset.control === controlMode);
+      }
+      for (const button of pauseControlSelect.querySelectorAll("button")) {
+        button.classList.toggle("selected", button.dataset.control === pendingControlMode);
+      }
+    }
+
     function chooseIntroDifficulty(nextDifficulty) {
       if (!difficultySettings[nextDifficulty]) return;
+      try { ensureAudio(); } catch (err) { console.warn("Intro audio wake skipped:", err); }
+      startIntroMusic();
       difficultyMode = nextDifficulty;
-      introReady = true;
+      introDifficultyPicked = true;
       localStorage.setItem("blueTiltDifficulty", difficultyMode);
       updateDifficultyButtons();
+      refreshIntroReady();
+    }
+
+    function chooseControlMode(nextMode) {
+      if (nextMode !== "mouse" && nextMode !== "keyboard") return;
+      try { ensureAudio(); } catch (err) { console.warn("Intro audio wake skipped:", err); }
+      startIntroMusic();
+      controlMode = nextMode;
+      introControlPicked = true;
+      localStorage.setItem("blueTiltControlMode", controlMode);
+      updateControlButtons();
+      refreshIntroReady();
+    }
+
+    function controlHelpText() {
+      if (controlMode === "mouse") return "이동: WASD | 조준: 마우스 | 대시: Space | 차징샷: 좌클릭 길게 누르기 | 근접 공격: 우클릭 | ESC/P 일시정지";
+      return "이동: 방향키/IJKL | 대시: A | 근접 공격: S | 차징샷: D 길게 누르기 | ESC/P 일시정지";
+    }
+
+    function refreshIntroReady() {
+      introReady = Boolean(introDifficultyPicked && introControlPicked && difficultyMode && controlMode);
       overlayTitle.textContent = "BLUE TILT DASH";
-      overlayLine1.textContent = `난이도 ${diff().label}`;
-      overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
-      overlayLine3.textContent = "이동: 방향키/IJKL | A 대시 | S 슬래시 | D 차징샷 | ESC/P 일시정지 | 아무 키로 시작";
-      difficultySelect.classList.add("hidden");
+      if (introReady) {
+        overlayLine1.textContent = `난이도 ${diff().label} | ${controlMode === "mouse" ? "마우스 플레이" : "키보드 플레이"}`;
+        overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
+        overlayLine3.textContent = controlHelpText();
+        controlHelp.textContent = controlHelpText();
+      } else {
+        overlayLine1.textContent = "CREATOR JU_IL";
+        overlayLine2.textContent = "난이도와 조작 방식을 선택하세요.";
+        overlayLine3.textContent = "선택 후 게임 시작을 누르세요.";
+      }
+      difficultySelect.classList.remove("hidden");
+      controlSelect.classList.remove("hidden");
+      introActions.classList.remove("hidden");
       pauseControls.classList.add("hidden");
+      updateIntroStartButton();
+    }
+
+    function updateIntroStartButton() {
+      startGameButton.disabled = !introReady;
+      startGameButton.textContent = introReady ? "게임 시작" : "설정 선택 필요";
     }
 
     function choosePauseDifficulty(nextDifficulty) {
       if (!difficultySettings[nextDifficulty]) return;
       pendingDifficultyMode = nextDifficulty;
       updateDifficultyButtons();
-      if (paused) overlayLine3.textContent = `재시작 난이도 ${difficultySettings[pendingDifficultyMode].label}`;
+      updatePauseRestartText();
+    }
+
+    function choosePauseControlMode(nextMode) {
+      if (nextMode !== "mouse" && nextMode !== "keyboard") return;
+      pendingControlMode = nextMode;
+      updateControlButtons();
+      updatePauseRestartText();
+    }
+
+    function controlLabel(modeName = controlMode) {
+      return modeName === "mouse" ? "마우스 플레이" : "키보드 플레이";
+    }
+
+    function updatePauseRestartText() {
+      if (!paused) return;
+      overlayLine3.textContent = `재시작 설정: ${difficultySettings[pendingDifficultyMode].label} / ${controlLabel(pendingControlMode)}`;
     }
 
     const keys = new Set();
+    const pointer = { x: 0, y: 0 };
     const bullets = [];
     const trails = [];
     const sparks = [];
@@ -454,7 +605,7 @@
     const popups = [];
     const pendingSnipes = [];
     const LIMITS = {
-      bullets: 260,
+      bullets: 900,
       sparks: 110,
       trails: 64,
       warnings: 24,
@@ -464,7 +615,6 @@
       popups: 24,
       pendingSnipes: 5
     };
-    installArrayLimit(bullets, LIMITS.bullets);
     installArrayLimit(sparks, LIMITS.sparks);
     installArrayLimit(trails, LIMITS.trails);
     installArrayLimit(warnings, LIMITS.warnings);
@@ -550,10 +700,12 @@
     const FINAL_WARNING_DURATION = 4.2;
     let audioCtx = null;
     let masterGain = null;
-    const AUDIO_BOOST = 1.75;
+    const AUDIO_BOOST = 3.5;
     volumeSlider.value = localStorage.getItem("blueTiltVolume") || volumeSlider.value;
     let masterVolume = Number(volumeSlider.value) / 100;
     let bgmTimer = null;
+    let introMusicTimer = null;
+    let introMusicStep = 0;
     let bgmStep = 0;
     let bgmChordStep = 0;
     let noiseBuffer = null;
@@ -582,6 +734,10 @@
     let hudClock = 0;
     let runStage = 1;
     let finalWarningTimer = 0;
+    let finalWarningElapsed = 0;
+    let finalRefillStartHp = 0;
+    let finalRefillTargetHp = 0;
+    let finalBossPrepared = false;
     let warningPulse = 0;
     let warningSirenClock = 0;
 
@@ -618,6 +774,8 @@
       pendingSnipes.length = 0;
       player.x = width / 2;
       player.y = height - 120;
+      pointer.x = player.x;
+      pointer.y = player.y - 120;
       player.vx = 0;
       player.vy = 0;
       player.angle = -Math.PI / 2;
@@ -667,6 +825,10 @@
       score = 0;
       runStage = 1;
       finalWarningTimer = 0;
+      finalWarningElapsed = 0;
+      finalRefillStartHp = 0;
+      finalRefillTargetHp = 0;
+      finalBossPrepared = false;
       warningPulse = 0;
       warningSirenClock = 0;
       patternClock = 0;
@@ -689,19 +851,29 @@
       introReady = false;
       overlay.classList.remove("visible");
       difficultySelect.classList.add("hidden");
+      controlSelect.classList.add("hidden");
+      introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
       bossHud.style.display = "block";
       playSound("start");
+      stopIntroMusic();
       startBgm();
     }
 
     function keyVector() {
       let x = 0;
       let y = 0;
-      if (keys.has("arrowleft") || keys.has("j")) x -= 1;
-      if (keys.has("arrowright") || keys.has("l")) x += 1;
-      if (keys.has("arrowup") || keys.has("i")) y -= 1;
-      if (keys.has("arrowdown") || keys.has("k")) y += 1;
+      if (controlMode === "mouse") {
+        if (keys.has("a")) x -= 1;
+        if (keys.has("d")) x += 1;
+        if (keys.has("w")) y -= 1;
+        if (keys.has("s")) y += 1;
+      } else {
+        if (keys.has("arrowleft") || keys.has("j")) x -= 1;
+        if (keys.has("arrowright") || keys.has("l")) x += 1;
+        if (keys.has("arrowup") || keys.has("i")) y -= 1;
+        if (keys.has("arrowdown") || keys.has("k")) y += 1;
+      }
       const len = Math.hypot(x, y) || 1;
       return { x: x / len, y: y / len, active: x !== 0 || y !== 0 };
     }
@@ -744,6 +916,18 @@
       masterGain.gain.setTargetAtTime(boostedVolume(), audioCtx.currentTime, 0.015);
       if (audioCtx.state === "suspended") audioCtx.resume();
       return audioCtx;
+    }
+
+    function tryStartIntroAudio() {
+      try {
+        const ac = ensureAudio();
+        const resumeResult = ac.resume && ac.resume();
+        if (resumeResult && typeof resumeResult.catch === "function") {
+          resumeResult.catch((err) => console.warn("Intro autoplay blocked:", err));
+        }
+      } catch (err) {
+        console.warn("Intro autoplay unavailable:", err);
+      }
     }
 
     function tone(freq, duration, type = "sine", gain = 0.05, slide = 1) {
@@ -822,7 +1006,7 @@
     }
 
     function boostedVolume() {
-      return Math.min(1.65, masterVolume * AUDIO_BOOST);
+      return Math.min(2.4, masterVolume * AUDIO_BOOST);
     }
 
     function playSound(name) {
@@ -885,7 +1069,31 @@
       }
     }
 
+    function startIntroMusic() {
+      if (introMusicTimer) return;
+      introMusicStep = 0;
+      const motif = [220, 277.18, 329.63, 415.3, 392, 329.63, 493.88, 0, 440, 349.23, 293.66, 369.99, 329.63, 0, 246.94, 277.18];
+      const bass = [110, 0, 146.83, 0, 98, 0, 123.47, 0];
+      introMusicTimer = setInterval(() => {
+        if (mode !== "intro") return;
+        const step = introMusicStep % motif.length;
+        const note = motif[step];
+        const bassNote = bass[introMusicStep % bass.length];
+        if (note) tone(note, 0.11, step % 4 === 0 ? "triangle" : "sine", 0.012, 1.08);
+        if (bassNote && step % 2 === 0) tone(bassNote, 0.16, "sawtooth", 0.01, 0.98);
+        if (step % 8 === 4) noiseHit(0.025, 0.004, 7600, "highpass");
+        introMusicStep += 1;
+      }, BEAT * 210);
+    }
+
+    function stopIntroMusic() {
+      if (introMusicTimer) clearInterval(introMusicTimer);
+      introMusicTimer = null;
+      introMusicStep = 0;
+    }
+
     function startBgm() {
+      stopIntroMusic();
       stopBgm();
       bgmStep = 0;
       bgmChordStep = 0;
@@ -1152,7 +1360,10 @@
         const s = 90 + Math.random() * (240 + power * 80);
         sparks.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.38 + power * 0.04, max: 0.42 + power * 0.04, color: i % 3 ? "#ffd66b" : "#43d9ff" });
       }
-      if (boss.hp <= 0) winGame();
+      if (boss.hp <= 0) {
+        if (runStage === 1) startFinalWarning();
+        else winGame();
+      }
     }
 
     function dashCutBullet(b, combo) {
@@ -1246,6 +1457,8 @@
       overlay.classList.add("visible");
       overlayTitle.textContent = "PHASE DATA CAPTURED";
       difficultySelect.classList.add("hidden");
+      controlSelect.classList.add("hidden");
+      introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
       overlayLine1.textContent = `1: ${upgradeChoices[0].name} - ${upgradeChoices[0].desc}`;
       overlayLine2.textContent = `2: ${upgradeChoices[1].name} - ${upgradeChoices[1].desc}`;
@@ -1278,24 +1491,39 @@
       overlay.classList.remove("visible");
       addPopup(`UPGRADE ACQUIRED: ${choice.name}`, player.x, player.y - 44, "#ffd66b", 18);
       playSound("itemGet");
-      if (boss.phase >= 3 && runStage === 1) {
-        startFinalWarning();
-      } else {
-        mode = "bullet";
-      }
+      mode = "bullet";
     }
 
     function startFinalWarning() {
+      if (runStage === 2 || gameOver) return;
       runStage = 2;
       mode = "finalWarning";
       paused = false;
+      finalBossPrepared = true;
+      finalWarningElapsed = 0;
+      finalRefillStartHp = 0;
+      finalRefillTargetHp = Math.round((BASE_BOSS_HP * diff().hp + BASE_FINAL_CORE_HP * diff().finalHp) * 0.9);
+      boss.maxHp = finalRefillTargetHp;
+      boss.hp = 0;
+      boss.alive = true;
+      boss.groggyTimer = 0;
+      boss.exposedTimer = 0;
+      boss.phaseShiftTimer = 0;
+      boss.breakValue = 0;
+      boss.breakFlash = 1;
+      bullets.length = 0;
+      warnings.length = 0;
+      lasers.length = 0;
+      pendingSnipes.length = 0;
       overlay.classList.add("visible");
       overlayTitle.textContent = "- WARNING -";
       difficultySelect.classList.add("hidden");
+      controlSelect.classList.add("hidden");
+      introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
-      overlayLine1.textContent = "최종 코어가 재기동합니다.";
-      overlayLine2.textContent = "사이렌 종료 후 난이도가 급상승합니다.";
-      overlayLine3.textContent = "준비하세요.";
+      overlayLine1.textContent = "OVERDRIVE CORE가 완전 재기동합니다.";
+      overlayLine2.textContent = "코어 체력이 급속 충전됩니다.";
+      overlayLine3.textContent = "최종 보스 진입 준비.";
       finalWarningTimer = FINAL_WARNING_DURATION;
       warningPulse = 1;
       warningSirenClock = 0;
@@ -1309,15 +1537,19 @@
       mode = "bullet";
       paused = false;
       finalWarningTimer = 0;
+      finalWarningElapsed = 0;
       warningPulse = 0;
       warningSirenClock = 0;
       overlay.classList.remove("visible");
       player.alive = true;
       player.invuln = 1.35;
       player.dashEnergy = player.dashMax;
-      const finalCoreHp = Math.round(BASE_FINAL_CORE_HP * diff().finalHp);
-      boss.maxHp += finalCoreHp;
-      boss.hp = Math.max(boss.hp, finalCoreHp);
+      if (!finalBossPrepared) {
+        finalRefillTargetHp = Math.round((BASE_BOSS_HP * diff().hp + BASE_FINAL_CORE_HP * diff().finalHp) * 0.9);
+        boss.maxHp = finalRefillTargetHp;
+      }
+      boss.hp = boss.maxHp;
+      finalBossPrepared = false;
       boss.alive = true;
       boss.groggyTimer = 0;
       boss.phaseShiftTimer = 2.1;
@@ -1336,13 +1568,17 @@
       paused = !paused;
       if (paused) {
         pendingDifficultyMode = difficultyMode;
+        pendingControlMode = controlMode || "mouse";
         updateDifficultyButtons();
+        updateControlButtons();
         overlay.classList.add("visible");
         overlayTitle.textContent = "PAUSED";
         overlayLine1.textContent = "ESC 또는 P를 누르면 전투로 복귀합니다.";
-        overlayLine2.textContent = "난이도를 바꾸려면 아래에서 선택한 뒤 재설정 후 재시작을 누르세요.";
-        overlayLine3.textContent = `현재 난이도 ${diff().label}`;
+        overlayLine2.textContent = "난이도와 조작 방식을 바꾼 뒤 재설정 후 재시작을 누르세요.";
+        overlayLine3.textContent = `현재 설정: ${diff().label} / ${controlLabel(controlMode)}`;
         difficultySelect.classList.add("hidden");
+        controlSelect.classList.add("hidden");
+        introActions.classList.add("hidden");
         pauseControls.classList.remove("hidden");
       } else {
         overlay.classList.remove("visible");
@@ -1353,7 +1589,10 @@
     function restartFromPause() {
       if (!paused || mode !== "bullet") return;
       difficultyMode = pendingDifficultyMode;
+      controlMode = pendingControlMode;
       localStorage.setItem("blueTiltDifficulty", difficultyMode);
+      localStorage.setItem("blueTiltControlMode", controlMode);
+      controlHelp.textContent = controlHelpText();
       resetGame();
     }
 
@@ -1997,6 +2236,9 @@
 
       player.x = Math.max(20, Math.min(width - 20, player.x));
       player.y = Math.max(20, Math.min(height - 20, player.y));
+      if (controlMode === "mouse") {
+        player.angle = Math.atan2(pointer.y - player.y, pointer.x - player.x);
+      }
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + player.dashRegen * dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
@@ -2053,6 +2295,8 @@
       overlay.classList.add("visible");
       overlayTitle.textContent = "SYSTEM FAILURE";
       difficultySelect.classList.add("hidden");
+      controlSelect.classList.add("hidden");
+      introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
       overlayLine1.textContent = "AI 코어가 방어망을 재구성했습니다. 침투 프로그램이 강제 종료되었습니다.";
       overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
@@ -2077,6 +2321,8 @@
       overlay.classList.add("visible");
       overlayTitle.textContent = "CORE SHUTDOWN";
       difficultySelect.classList.add("hidden");
+      controlSelect.classList.add("hidden");
+      introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
       overlayLine1.textContent = "폭주한 AI 프로그램의 제어권을 회수했습니다. 시스템은 아직 불안정하지만, 핵심 코어는 정지되었습니다.";
       overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
@@ -2093,7 +2339,7 @@
     function updateWorld(dt) {
       trimEffectLists();
 
-      if (boss.alive && player.alive) {
+      if (mode === "bullet" && boss.alive && player.alive) {
         const rr = boss.r + player.r * 0.8;
         if (distSq(player.x, player.y, boss.x, boss.y) < rr * rr) {
           if (player.dashTime > 0) {
@@ -2297,12 +2543,12 @@
 
     function drawGrid() {
       ctx.save();
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.075;
       ctx.strokeStyle = "#1d4051";
       ctx.lineWidth = 1;
-      const size = 42;
-      const ox = (time * -45) % size;
-      const oy = (time * -28) % size;
+      const size = 58;
+      const ox = (time * -24) % size;
+      const oy = (time * -16) % size;
       for (let x = ox; x < width; x += size) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -2334,9 +2580,19 @@
       ctx.lineTo(-11, 11);
       ctx.closePath();
       ctx.fill();
+      ctx.globalAlpha = alpha * 0.65;
+      ctx.strokeStyle = "#e9f4ff";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = "#e9f4ff";
       ctx.beginPath();
       ctx.arc(-1, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = alpha * 0.4;
+      ctx.fillStyle = "#071018";
+      ctx.beginPath();
+      ctx.arc(1, 0, 2.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -2369,6 +2625,10 @@
       }
       ctx.closePath();
       ctx.fill();
+      ctx.globalAlpha = 0.58;
+      ctx.strokeStyle = "#e9f4ff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.globalAlpha = 0.32;
       ctx.strokeStyle = boss.phaseShiftTimer > 0 ? "#ffffff" : boss.groggyTimer > 0 ? "#ffd66b" : boss.exposedTimer > 0 ? "#ffffff" : colors.warn;
       ctx.lineWidth = 4;
@@ -2392,6 +2652,41 @@
         ctx.arc(0, 0, boss.r + 34 + Math.sin(time * 10) * 5, 0, Math.PI * 2);
         ctx.stroke();
       }
+      ctx.restore();
+    }
+
+    function drawArenaAtmosphere() {
+      ctx.save();
+      const colors = bossPalette();
+      ctx.globalAlpha = 0.16;
+      const phaseWash = ctx.createLinearGradient(0, 0, width, height);
+      phaseWash.addColorStop(0, colors.core);
+      phaseWash.addColorStop(0.45, "rgba(7, 16, 24, 0)");
+      phaseWash.addColorStop(1, colors.warn);
+      ctx.fillStyle = phaseWash;
+      ctx.fillRect(0, 0, width, height);
+
+      const coreGlow = ctx.createRadialGradient(width / 2, height * 0.24, 20, width / 2, height * 0.24, Math.max(width, height) * 0.58);
+      coreGlow.addColorStop(0, colors.core);
+      coreGlow.addColorStop(0.34, "rgba(167, 124, 255, 0.06)");
+      coreGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = coreGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalAlpha = 0.055;
+      ctx.fillStyle = "#ffffff";
+      const scanOffset = Math.floor((time * 38) % 8);
+      for (let y = scanOffset; y < height; y += 8) {
+        ctx.fillRect(0, y, width, 1);
+      }
+
+      const vignette = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.2, width / 2, height / 2, Math.max(width, height) * 0.72);
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.48)");
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
       ctx.restore();
     }
 
@@ -2433,6 +2728,7 @@
       const sy = renderShake ? (Math.random() - 0.5) * renderShake : 0;
       ctx.translate(sx, sy);
 
+      drawArenaAtmosphere();
       drawGrid();
 
       drawRhythmCue();
@@ -2539,6 +2835,9 @@
       }
 
       for (const b of bullets) {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = b.color;
         ctx.fillStyle = b.color;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -2547,10 +2846,18 @@
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r * 1.9, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.72;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(b.x - b.r * 0.22, b.y - b.r * 0.22, Math.max(1.3, b.r * 0.32), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
       for (const shot of shots) {
+        ctx.save();
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = shot.color;
         ctx.fillStyle = shot.color;
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2);
@@ -2559,7 +2866,12 @@
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, shot.r * 2.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, Math.max(2, shot.r * 0.28), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
       for (const slashMark of slashes) {
@@ -2631,14 +2943,17 @@
         }
         if (player.shield > 0) {
           ctx.save();
-          ctx.globalAlpha = 0.25 + Math.sin(time * 8) * 0.08;
-          ctx.strokeStyle = "#ffd66b";
-          ctx.lineWidth = 3;
           ctx.shadowBlur = 8;
           ctx.shadowColor = "#ffd66b";
-          ctx.beginPath();
-          ctx.arc(player.x, player.y, 25 + player.shield * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          for (let i = 0; i < player.shield; i++) {
+            const pulse = Math.sin(time * 8 + i * 0.9) * 0.08;
+            ctx.globalAlpha = 0.28 - i * 0.045 + pulse;
+            ctx.strokeStyle = i === 0 ? "#fff3a6" : "#ffd66b";
+            ctx.lineWidth = Math.max(1.6, 3 - i * 0.35);
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, 27 + i * 6 + pulse * 12, 0, Math.PI * 2);
+            ctx.stroke();
+          }
           ctx.restore();
         }
         drawPlayerLike(player.x, player.y, player.angle, player.invuln > 0 ? 0.72 : 1, 1, tilt);
@@ -2685,7 +3000,15 @@
         } else if (mode === "finalWarning" && !gameOver) {
           hitStop = Math.max(0, hitStop - dt);
           time += dt;
+          finalWarningElapsed += dt;
           finalWarningTimer = Math.max(0, finalWarningTimer - dt);
+          if (finalRefillTargetHp > 0) {
+            const refillRatio = Math.min(1, finalWarningElapsed / FINAL_WARNING_DURATION);
+            const eased = 1 - Math.pow(1 - refillRatio, 2.6);
+            boss.hp = Math.min(boss.maxHp, finalRefillStartHp + (finalRefillTargetHp - finalRefillStartHp) * eased);
+            boss.hitFlash = Math.max(boss.hitFlash, 0.08);
+            boss.hurtPulse = Math.max(boss.hurtPulse, 0.55);
+          }
           warningPulse = Math.max(0, warningPulse - dt * 2.2);
           warningSirenClock -= dt;
           if (warningSirenClock <= 0) {
@@ -2694,7 +3017,8 @@
             shake = Math.max(shake, 12 + (FINAL_WARNING_DURATION - finalWarningTimer) * 2.4);
             playSound("siren");
             overlayTitle.textContent = finalWarningTimer > 1.7 ? "- WARNING -" : "- FINAL CORE -";
-            overlayLine1.textContent = finalWarningTimer > 1.7 ? "위험도 상승. 최종 패턴 진입." : "방어막 해제. 접근 금지.";
+            overlayLine1.textContent = finalWarningTimer > 1.7 ? "보스 코어 체력 재충전 중." : "체력 충전 완료. 최종 패턴 진입.";
+            overlayLine2.textContent = `CORE HP ${Math.round((boss.hp / boss.maxHp) * 100)}%`;
           }
           updateWorld(dt);
           if (finalWarningTimer <= 0) startFinalBoss();
@@ -2761,27 +3085,71 @@
       if (!button || mode !== "intro") return;
       chooseIntroDifficulty(button.dataset.difficulty);
     });
+    controlSelect.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-control]");
+      if (!button || mode !== "intro") return;
+      chooseControlMode(button.dataset.control);
+    });
+    startGameButton.addEventListener("click", () => {
+      if (mode !== "intro") return;
+      introReady = true;
+      introDifficultyPicked = true;
+      introControlPicked = true;
+      if (!difficultySettings[difficultyMode]) difficultyMode = "EASY";
+      if (controlMode !== "mouse" && controlMode !== "keyboard") controlMode = "mouse";
+      resetGame();
+    });
     pauseDifficultySelect.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-difficulty]");
       if (!button || !paused || mode !== "bullet") return;
       choosePauseDifficulty(button.dataset.difficulty);
     });
+    pauseControlSelect.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-control]");
+      if (!button || !paused || mode !== "bullet") return;
+      choosePauseControlMode(button.dataset.control);
+    });
     restartWithDifficulty.addEventListener("click", restartFromPause);
+    window.addEventListener("contextmenu", (event) => {
+      if (controlMode === "mouse" && mode === "bullet") event.preventDefault();
+    });
+    window.addEventListener("mousemove", (event) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+    });
+    window.addEventListener("mousedown", (event) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      if (controlMode !== "mouse" || mode !== "bullet" || paused || gameOver) return;
+      event.preventDefault();
+      if (event.button === 0 && !player.charging && player.shotCooldown <= 0) {
+        player.charging = true;
+        player.charge = 0;
+      } else if (event.button === 2) {
+        slash();
+      }
+    });
+    window.addEventListener("mouseup", (event) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      if (controlMode !== "mouse" || mode !== "bullet" || paused || gameOver) return;
+      event.preventDefault();
+      if (event.button === 0) fireChargedShot();
+    });
 
     window.addEventListener("keydown", (event) => {
       const key = event.key.toLowerCase();
-      if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "a", "s", "d", "p", "escape", "1", "2", "3"].includes(key)) event.preventDefault();
+      if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "p", "escape", "1", "2", "3"].includes(key)) event.preventDefault();
 
       if (mode === "intro") {
-        if (introReady) resetGame();
         return;
       }
       if (mode === "upgrade") {
         applyUpgradeChoice(key);
         return;
       }
-      if (gameOver && key === " ") {
-        resetGame();
+      if (gameOver) {
+        if (key === " ") resetGame();
         return;
       }
       if (key === "p" || key === "escape") {
@@ -2789,11 +3157,15 @@
         return;
       }
       if (paused) return;
-      if (key === "a") dash();
-      if (key === "s") slash();
-      if (key === "d" && !event.repeat && mode === "bullet" && player.shotCooldown <= 0) {
-        player.charging = true;
-        player.charge = 0;
+      if (controlMode === "mouse") {
+        if (key === " ") dash();
+      } else {
+        if (key === "a") dash();
+        if (key === "s") slash();
+        if (key === "d" && !event.repeat && mode === "bullet" && player.shotCooldown <= 0) {
+          player.charging = true;
+          player.charge = 0;
+        }
       }
       keys.add(key);
     });
@@ -2804,7 +3176,7 @@
         keys.delete(key);
         return;
       }
-      if (key === "d") fireChargedShot();
+      if (controlMode !== "mouse" && key === "d") fireChargedShot();
       keys.delete(key);
     });
 
@@ -2815,6 +3187,7 @@
 
     resize();
     setVolume(Number(volumeSlider.value));
+    tryStartIntroAudio();
     enterBulletIntro();
     requestAnimationFrame(loop);
   </script>
