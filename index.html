@@ -378,12 +378,62 @@
         display: flex;
       }
 
+      .mobile-controls {
+        inset: auto 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
+        align-items: flex-end;
+        gap: 10px;
+      }
+
+      .mobile-pad,
+      .mobile-actions {
+        gap: 6px;
+      }
+
+      .mobile-pad div {
+        gap: 6px;
+      }
+
+      .mobile-actions {
+        flex-direction: column;
+      }
+
+      .mobile-controls button {
+        min-width: 46px;
+        min-height: 42px;
+        padding: 0 9px;
+        font-size: 13px;
+        border-radius: 7px;
+      }
+
+      .mobile-actions button {
+        min-width: 58px;
+      }
+
       .hud {
         inset: 12px 12px auto 12px;
+        gap: 8px;
+      }
+
+      .hud-left {
+        min-width: 132px;
+        gap: 8px;
+      }
+
+      .meter {
+        min-width: 132px;
+        gap: 5px;
+      }
+
+      .score {
+        max-width: 46vw;
       }
 
       .score .sub {
         display: none;
+      }
+
+      .volume-control {
+        max-width: 140px;
       }
     }
 
@@ -651,6 +701,12 @@
       startGameButton.textContent = introReady ? "게임 시작" : "설정 선택 필요";
     }
 
+    function showRestartButton(label = "다시 시작") {
+      introActions.classList.remove("hidden");
+      startGameButton.disabled = false;
+      startGameButton.textContent = label;
+    }
+
     function choosePauseDifficulty(nextDifficulty) {
       if (!difficultySettings[nextDifficulty]) return;
       pendingDifficultyMode = nextDifficulty;
@@ -674,12 +730,48 @@
       overlayLine3.textContent = `재시작 설정: ${difficultySettings[pendingDifficultyMode].label}`;
     }
 
+    function isTouchDevice() {
+      return window.matchMedia("(hover: none) and (pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+    }
+
     function setMobileControlsActive(active) {
       mobileControls.classList.toggle("active", Boolean(active));
+      if (!active) clearTouchInput();
+    }
+
+    function clearTouchInput() {
+      for (const key of activeTouchKeys.values()) keys.delete(key);
+      activeTouchKeys.clear();
+      activeTouchShots.clear();
+    }
+
+    function clearAllInput() {
+      keys.clear();
+      clearTouchInput();
+      player.charging = false;
+      player.charge = 0;
+    }
+
+    function releaseMobilePointer(event, fireShot = false) {
+      const key = activeTouchKeys.get(event.pointerId);
+      if (key) {
+        keys.delete(key);
+        activeTouchKeys.delete(event.pointerId);
+      }
+      if (activeTouchShots.has(event.pointerId)) {
+        activeTouchShots.delete(event.pointerId);
+        if (fireShot) fireChargedShot();
+        else if (!activeTouchShots.size) {
+          player.charging = false;
+          player.charge = 0;
+        }
+      }
     }
 
     // 런타임 배열: 전투 오브젝트와 이펙트를 모아두고 프레임마다 갱신/렌더한다.
     const keys = new Set();
+    const activeTouchKeys = new Map();
+    const activeTouchShots = new Set();
     const pointer = { x: 0, y: 0 };
     const bullets = [];
     const trails = [];
@@ -693,7 +785,7 @@
     const popups = [];
     const pendingSnipes = [];
     const LIMITS = {
-      bullets: 900,
+      bullets: 1200,
       sparks: 110,
       trails: 64,
       warnings: 24,
@@ -863,6 +955,7 @@
     // 새 게임 시작: 난이도별 체력/목숨과 모든 전투 상태를 초기화한다.
     function resetGame() {
       paused = false;
+      clearAllInput();
       upgrades.shot = 0;
       upgrades.slash = 0;
       upgrades.dash = 0;
@@ -1298,8 +1391,31 @@
       return item;
     }
 
+    function bulletLimit() {
+      return isTouchDevice() ? 850 : LIMITS.bullets;
+    }
+
+    function pruneOffscreenBullets(margin = 160) {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (b.x < -margin || b.x > width + margin || b.y < -margin || b.y > height + margin) {
+          bullets.splice(i, 1);
+        }
+      }
+    }
+
+    function addBullet(bullet) {
+      const max = bulletLimit();
+      if (bullets.length >= max) pruneOffscreenBullets(120);
+      if (bullets.length >= max) return null;
+      bullets.push(bullet);
+      return bullet;
+    }
+
     function trimEffectLists() {
-      trimOldest(bullets, LIMITS.bullets);
+      pruneOffscreenBullets(180);
+      const maxBullets = bulletLimit();
+      if (bullets.length > maxBullets + 160) trimOldest(bullets, maxBullets);
       trimOldest(sparks, LIMITS.sparks);
       trimOldest(trails, LIMITS.trails);
       trimOldest(warnings, LIMITS.warnings);
@@ -1827,10 +1943,10 @@
     }
 
     function fireChargedShot() {
-      if (!player.alive || mode !== "bullet" || player.shotCooldown > 0) return;
       const charge = player.charge;
       player.charge = 0;
       player.charging = false;
+      if (!player.alive || mode !== "bullet" || player.shotCooldown > 0) return;
       if (charge < 0.08) return;
       const powered = player.shotTimer > 0 || player.powerTimer > 0;
       const ratio = Math.min(1, charge / (powered ? 0.9 : 1.2));
@@ -1974,7 +2090,7 @@
 
     function spawnBullet(x, y, vx, vy, radius, color, wobble = 0, meta = {}) {
       const speedScale = diff().speed;
-      pushLimited(bullets, { x, y, vx: vx * speedScale, vy: vy * speedScale, r: radius, color, wobble, age: 0, ...meta }, LIMITS.bullets);
+      return addBullet({ x, y, vx: vx * speedScale, vy: vy * speedScale, r: radius, color, wobble, age: 0, ...meta });
     }
 
     function spawnBurstBomb() {
@@ -1986,7 +2102,7 @@
       const ty = height * (0.34 + Math.random() * 0.34);
       const a = Math.atan2(ty - p.y, tx - p.x);
       const speed = 115 + boss.phase * 18 + difficulty * 12;
-      pushLimited(bullets, {
+      addBullet({
         x: p.x,
         y: p.y,
         vx: Math.cos(a) * speed,
@@ -1999,7 +2115,7 @@
         breakable: true,
         splitTime: Math.max(0.8, 1.25 - boss.phase * 0.13),
         splitCount: 12 + boss.phase * 5 + Math.floor(difficulty * 3)
-      }, LIMITS.bullets);
+      });
       spawnWarning(p.x, p.y, tx, ty, colors.warn);
     }
 
@@ -2442,8 +2558,7 @@
       warningPulse = 0;
       warningSirenClock = 0;
       hitStop = 0;
-      player.charging = false;
-      keys.clear();
+      clearAllInput();
       bullets.length = 0;
       warnings.length = 0;
       lasers.length = 0;
@@ -2461,7 +2576,8 @@
       pauseControls.classList.add("hidden");
       overlayLine1.textContent = "AI 코어가 방어망을 재구성했습니다. 침투 프로그램이 강제 종료되었습니다.";
       overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
-      overlayLine3.textContent = "Space를 눌러 재침투";
+      overlayLine3.textContent = isTouchDevice() ? "재시작 버튼으로 재침투" : "Space 또는 재시작 버튼으로 재침투";
+      showRestartButton("재시작");
       shake = 16;
       playSound("hurt");
       for (let i = 0; i < 45; i++) {
@@ -2488,7 +2604,8 @@
       pauseControls.classList.add("hidden");
       overlayLine1.textContent = "폭주한 AI 프로그램의 제어권을 회수했습니다. 시스템은 아직 불안정하지만, 핵심 코어는 정지되었습니다.";
       overlayLine2.textContent = `현재 점수 ${Math.floor(score)} | 최고 점수 ${highScore}`;
-      overlayLine3.textContent = "Space를 눌러 다시 실행";
+      overlayLine3.textContent = isTouchDevice() ? "재시작 버튼으로 다시 실행" : "Space 또는 재시작 버튼으로 다시 실행";
+      showRestartButton("다시 실행");
       shake = 18;
       playSound("win");
       for (let i = 0; i < 90; i++) {
@@ -3271,6 +3388,10 @@
       chooseIntroDifficulty(button.dataset.difficulty);
     });
     startGameButton.addEventListener("click", () => {
+      if (gameOver) {
+        resetGame();
+        return;
+      }
       if (mode !== "intro") return;
       introReady = true;
       introDifficultyPicked = true;
@@ -3291,34 +3412,31 @@
       if (!keyButton && !actionButton) return;
       event.preventDefault();
       if (mode !== "bullet" || paused || gameOver) return;
+      try { event.target.setPointerCapture(event.pointerId); } catch (err) {}
       if (keyButton) {
-        keys.add(keyButton.dataset.touchKey);
+        const keyName = keyButton.dataset.touchKey;
+        activeTouchKeys.set(event.pointerId, keyName);
+        keys.add(keyName);
         return;
       }
       const action = actionButton.dataset.touchAction;
       if (action === "dash") dash();
       if (action === "slash") slash();
       if (action === "shot" && !player.charging && player.shotCooldown <= 0) {
+        activeTouchShots.add(event.pointerId);
         player.charging = true;
         player.charge = 0;
       }
     });
     mobileControls.addEventListener("pointerup", (event) => {
-      const keyButton = event.target.closest("[data-touch-key]");
-      const actionButton = event.target.closest("[data-touch-action]");
-      if (!keyButton && !actionButton) return;
       event.preventDefault();
-      if (keyButton) keys.delete(keyButton.dataset.touchKey);
-      if (actionButton && actionButton.dataset.touchAction === "shot") fireChargedShot();
+      releaseMobilePointer(event, true);
     });
     mobileControls.addEventListener("pointercancel", (event) => {
-      const keyButton = event.target.closest("[data-touch-key]");
-      const actionButton = event.target.closest("[data-touch-action]");
-      if (keyButton) keys.delete(keyButton.dataset.touchKey);
-      if (actionButton && actionButton.dataset.touchAction === "shot") {
-        player.charging = false;
-        player.charge = 0;
-      }
+      releaseMobilePointer(event, false);
+    });
+    mobileControls.addEventListener("lostpointercapture", (event) => {
+      releaseMobilePointer(event, false);
     });
 
     window.addEventListener("keydown", (event) => {
@@ -3358,6 +3476,11 @@
       }
       if (key === "d") fireChargedShot();
       keys.delete(key);
+    });
+
+    window.addEventListener("blur", clearAllInput);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) clearAllInput();
     });
 
     volumeSlider.addEventListener("input", () => {
