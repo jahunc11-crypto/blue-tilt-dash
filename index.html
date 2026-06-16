@@ -321,6 +321,72 @@
       letter-spacing: 0;
     }
 
+    #controlSelect,
+    #pauseControlSelect {
+      display: none !important;
+    }
+
+    .mobile-controls {
+      position: fixed;
+      inset: auto 14px 14px 14px;
+      display: none;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .mobile-pad,
+    .mobile-actions {
+      display: grid;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .mobile-pad {
+      justify-items: center;
+    }
+
+    .mobile-pad div,
+    .mobile-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mobile-controls button {
+      min-width: 54px;
+      min-height: 48px;
+      border: 1px solid rgba(158, 223, 255, 0.28);
+      background: rgba(4, 13, 22, 0.62);
+      color: var(--ink);
+      font-weight: 800;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 18px rgba(67, 217, 255, 0.12);
+      touch-action: none;
+      user-select: none;
+    }
+
+    .mobile-actions button {
+      min-width: 62px;
+      color: #fff3a6;
+      border-color: rgba(255, 214, 107, 0.38);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .mobile-controls.active {
+        display: flex;
+      }
+
+      .hud {
+        inset: 12px 12px auto 12px;
+      }
+
+      .score .sub {
+        display: none;
+      }
+    }
+
     .pause-actions button:hover,
     .pause-actions button:focus-visible {
       border-color: var(--cyan);
@@ -363,7 +429,7 @@
     </div>
     <div class="score">
       <div id="scoreText">0</div>
-      <div class="sub" id="controlHelp">Arrow/IJKL move | A dash | S slash | Hold D shot | ESC/P pause</div>
+      <div class="sub" id="controlHelp">Arrow move | A dash | S slash | Hold D shot | ESC/P pause</div>
       <div class="status-line" id="itemText">ITEMS: none</div>
       <label class="volume-control">
         <span>VOL</span>
@@ -384,7 +450,7 @@
       <h1 id="overlayTitle">BLUE TILT DASH</h1>
       <p id="overlayLine1">CREATOR JU_IL</p>
       <p id="overlayLine2">탄막을 카운터해서 BREAK를 쌓고 코어를 정지시키세요.</p>
-      <p id="overlayLine3">이동: 방향키/IJKL | A 대시 | S 슬래시 | D 차징샷 | ESC/P 일시정지</p>
+      <p id="overlayLine3">이동: 방향키 | A 대시 | S 슬래시 | D 차징샷 | ESC/P 일시정지</p>
       <div class="difficulty-select" id="difficultySelect" aria-label="난이도 선택">
         <button type="button" data-difficulty="EASY">쉬움</button>
         <button type="button" data-difficulty="NORMAL">보통</button>
@@ -411,6 +477,21 @@
           <button type="button" class="restart" id="restartWithDifficulty">재설정 후 재시작</button>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="mobile-controls" id="mobileControls" aria-label="모바일 조작 패널">
+    <div class="mobile-pad">
+      <button type="button" data-touch-key="arrowup">▲</button>
+      <div>
+        <button type="button" data-touch-key="arrowleft">◀</button>
+        <button type="button" data-touch-key="arrowdown">▼</button>
+        <button type="button" data-touch-key="arrowright">▶</button>
+      </div>
+    </div>
+    <div class="mobile-actions">
+      <button type="button" data-touch-action="dash">대시</button>
+      <button type="button" data-touch-action="slash">근접</button>
+      <button type="button" data-touch-action="shot">차징</button>
     </div>
   </div>
 
@@ -442,6 +523,7 @@
     const controlSelect = document.getElementById("controlSelect");
     const introActions = document.getElementById("introActions");
     const startGameButton = document.getElementById("startGameButton");
+    const mobileControls = document.getElementById("mobileControls");
     const pauseControls = document.getElementById("pauseControls");
     const pauseDifficultySelect = document.getElementById("pauseDifficultySelect");
     const pauseControlSelect = document.getElementById("pauseControlSelect");
@@ -451,8 +533,8 @@
     let paused = false;
     let difficultyMode = "EASY";
     let pendingDifficultyMode = difficultyMode;
-    let controlMode = "mouse";
-    let pendingControlMode = controlMode || "mouse";
+    let controlMode = "keyboard";
+    let pendingControlMode = controlMode;
     let introReady = false;
     let introDifficultyPicked = true;
     let introControlPicked = true;
@@ -460,21 +542,22 @@
     let breakTutorialShown = localStorage.getItem("blueTiltBreakHelp") === "1";
 
     const difficultySettings = {
-      EASY: { hp: 1.05, finalHp: 0.72, speed: 0.78, pattern: 1.28, label: "쉬움" },
-      NORMAL: { hp: 1.42, finalHp: 1, speed: 1, pattern: 1, label: "보통" },
-      HARD: { hp: 1.82, finalHp: 1.28, speed: 1.18, pattern: 0.78, label: "어려움" }
+      EASY: { hp: 1.05, finalHp: 0.72, speed: 0.78, pattern: 1.28, lives: 3, label: "쉬움" },
+      NORMAL: { hp: 1.42, finalHp: 1, speed: 1, pattern: 1, lives: 2, label: "보통" },
+      HARD: { hp: 1.82, finalHp: 1.28, speed: 1.18, pattern: 0.78, lives: 1, label: "어려움" }
     };
     const PHASE_THRESHOLDS = [0.75, 0.5, 0.25];
     const BASE_BOSS_HP = 620;
     const BASE_FINAL_CORE_HP = 430;
 
+    // 인트로 화면: 난이도 선택, 기본 안내, 시작 전 음악을 관리한다.
     function enterBulletIntro() {
       mode = "intro";
       introReady = true;
       introDifficultyPicked = true;
       introControlPicked = true;
       difficultyMode = "EASY";
-      controlMode = "mouse";
+      controlMode = "keyboard";
       pendingDifficultyMode = difficultyMode;
       pendingControlMode = controlMode;
       canvas.style.display = "block";
@@ -482,14 +565,15 @@
       bossHud.style.display = "none";
       overlay.classList.add("visible");
       overlayTitle.textContent = "BLUE TILT DASH";
-      overlayLine1.textContent = "난이도 쉬움 | 마우스 플레이";
+      overlayLine1.textContent = "난이도 쉬움";
       overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
       overlayLine3.textContent = controlHelpText();
       controlHelp.textContent = controlHelpText();
       difficultySelect.classList.remove("hidden");
-      controlSelect.classList.remove("hidden");
+      controlSelect.classList.add("hidden");
       introActions.classList.remove("hidden");
       pauseControls.classList.add("hidden");
+      setMobileControlsActive(false);
       updateDifficultyButtons();
       updateControlButtons();
       updateIntroStartButton();
@@ -539,15 +623,14 @@
     }
 
     function controlHelpText() {
-      if (controlMode === "mouse") return "이동: WASD | 조준: 마우스 | 대시: Space | 차징샷: 좌클릭 길게 누르기 | 근접 공격: 우클릭 | ESC/P 일시정지";
-      return "이동: 방향키/IJKL | 대시: A | 근접 공격: S | 차징샷: D 길게 누르기 | ESC/P 일시정지";
+      return "이동: 방향키 | 대시: A | 근접 공격: S | 차징샷: D 길게 누르기 | ESC/P 일시정지";
     }
 
     function refreshIntroReady() {
-      introReady = Boolean(introDifficultyPicked && introControlPicked && difficultyMode && controlMode);
+      introReady = Boolean(introDifficultyPicked && difficultyMode);
       overlayTitle.textContent = "BLUE TILT DASH";
       if (introReady) {
-        overlayLine1.textContent = `난이도 ${diff().label} | ${controlMode === "mouse" ? "마우스 플레이" : "키보드 플레이"}`;
+        overlayLine1.textContent = `난이도 ${diff().label}`;
         overlayLine2.textContent = "탄막을 피하는 것이 아니라 카운터해서 BREAK를 쌓으세요. BREAK 100%가 되면 코어가 GROGGY 상태가 됩니다.";
         overlayLine3.textContent = controlHelpText();
         controlHelp.textContent = controlHelpText();
@@ -557,7 +640,7 @@
         overlayLine3.textContent = "선택 후 게임 시작을 누르세요.";
       }
       difficultySelect.classList.remove("hidden");
-      controlSelect.classList.remove("hidden");
+      controlSelect.classList.add("hidden");
       introActions.classList.remove("hidden");
       pauseControls.classList.add("hidden");
       updateIntroStartButton();
@@ -583,14 +666,19 @@
     }
 
     function controlLabel(modeName = controlMode) {
-      return modeName === "mouse" ? "마우스 플레이" : "키보드 플레이";
+      return "키보드";
     }
 
     function updatePauseRestartText() {
       if (!paused) return;
-      overlayLine3.textContent = `재시작 설정: ${difficultySettings[pendingDifficultyMode].label} / ${controlLabel(pendingControlMode)}`;
+      overlayLine3.textContent = `재시작 설정: ${difficultySettings[pendingDifficultyMode].label}`;
     }
 
+    function setMobileControlsActive(active) {
+      mobileControls.classList.toggle("active", Boolean(active));
+    }
+
+    // 런타임 배열: 전투 오브젝트와 이펙트를 모아두고 프레임마다 갱신/렌더한다.
     const keys = new Set();
     const pointer = { x: 0, y: 0 };
     const bullets = [];
@@ -624,6 +712,7 @@
     installArrayLimit(popups, LIMITS.popups);
     installArrayLimit(pendingSnipes, LIMITS.pendingSnipes);
 
+    // 플레이어 상태: 이동, 공격 쿨타임, 실드, 목숨, 부활 무적을 한곳에서 관리한다.
     const player = {
       x: 0,
       y: 0,
@@ -648,6 +737,9 @@
       shotTimer: 0,
       shield: 0,
       invuln: 0,
+      lives: 1,
+      maxLives: 1,
+      reviveTimer: 0,
       dashChain: 0,
       dashChainTimer: 0,
       knockbackTimer: 0,
@@ -706,6 +798,7 @@
     let bgmTimer = null;
     let introMusicTimer = null;
     let introMusicStep = 0;
+    let introMusicGain = 0;
     let bgmStep = 0;
     let bgmChordStep = 0;
     let noiseBuffer = null;
@@ -754,6 +847,7 @@
       }
     }
 
+    // 새 게임 시작: 난이도별 체력/목숨과 모든 전투 상태를 초기화한다.
     function resetGame() {
       paused = false;
       upgrades.shot = 0;
@@ -796,6 +890,9 @@
       player.shotTimer = 0;
       player.shield = 0;
       player.invuln = 0;
+      player.maxLives = diff().lives;
+      player.lives = player.maxLives;
+      player.reviveTimer = 0;
       player.dashChain = 0;
       player.dashChainTimer = 0;
       player.knockbackTimer = 0;
@@ -854,8 +951,8 @@
       controlSelect.classList.add("hidden");
       introActions.classList.add("hidden");
       pauseControls.classList.add("hidden");
+      setMobileControlsActive(true);
       bossHud.style.display = "block";
-      playSound("start");
       stopIntroMusic();
       startBgm();
     }
@@ -863,17 +960,10 @@
     function keyVector() {
       let x = 0;
       let y = 0;
-      if (controlMode === "mouse") {
-        if (keys.has("a")) x -= 1;
-        if (keys.has("d")) x += 1;
-        if (keys.has("w")) y -= 1;
-        if (keys.has("s")) y += 1;
-      } else {
-        if (keys.has("arrowleft") || keys.has("j")) x -= 1;
-        if (keys.has("arrowright") || keys.has("l")) x += 1;
-        if (keys.has("arrowup") || keys.has("i")) y -= 1;
-        if (keys.has("arrowdown") || keys.has("k")) y += 1;
-      }
+      if (keys.has("arrowleft")) x -= 1;
+      if (keys.has("arrowright")) x += 1;
+      if (keys.has("arrowup")) y -= 1;
+      if (keys.has("arrowdown")) y += 1;
       const len = Math.hypot(x, y) || 1;
       return { x: x / len, y: y / len, active: x !== 0 || y !== 0 };
     }
@@ -906,6 +996,7 @@
       }
     }
 
+    // WebAudio 합성음: 효과음, 인트로 음악, 전투 BGM이 같은 마스터 볼륨을 사용한다.
     function ensureAudio() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (!masterGain) {
@@ -1069,20 +1160,29 @@
       }
     }
 
+    function playIntroMusicStep() {
+      if (mode !== "intro") return;
+      const motif = [220, 277.18, 329.63, 415.3, 392, 329.63, 493.88, 0, 440, 349.23, 293.66, 369.99, 329.63, 0, 246.94, 277.18];
+      const bass = [110, 0, 146.83, 0, 98, 0, 123.47, 0];
+      const step = introMusicStep % motif.length;
+      const note = motif[step];
+      const bassNote = bass[introMusicStep % bass.length];
+      introMusicGain = Math.min(1, introMusicGain + 0.14);
+      const leadGain = 0.003 + introMusicGain * 0.009;
+      const bassGain = Math.max(0, introMusicGain - 0.3) * 0.008;
+      if (note) tone(note, 0.13, step % 4 === 0 ? "triangle" : "sine", leadGain, 1.05);
+      if (bassNote && step % 2 === 0 && introMusicGain > 0.36) tone(bassNote, 0.18, "sine", bassGain, 0.99);
+      if (step % 8 === 4 && introMusicGain > 0.8) noiseHit(0.018, 0.0025, 7600, "highpass");
+      introMusicStep += 1;
+    }
+
     function startIntroMusic() {
       if (introMusicTimer) return;
       introMusicStep = 0;
-      const motif = [220, 277.18, 329.63, 415.3, 392, 329.63, 493.88, 0, 440, 349.23, 293.66, 369.99, 329.63, 0, 246.94, 277.18];
-      const bass = [110, 0, 146.83, 0, 98, 0, 123.47, 0];
+      introMusicGain = 0;
+      playIntroMusicStep();
       introMusicTimer = setInterval(() => {
-        if (mode !== "intro") return;
-        const step = introMusicStep % motif.length;
-        const note = motif[step];
-        const bassNote = bass[introMusicStep % bass.length];
-        if (note) tone(note, 0.11, step % 4 === 0 ? "triangle" : "sine", 0.012, 1.08);
-        if (bassNote && step % 2 === 0) tone(bassNote, 0.16, "sawtooth", 0.01, 0.98);
-        if (step % 8 === 4) noiseHit(0.025, 0.004, 7600, "highpass");
-        introMusicStep += 1;
+        playIntroMusicStep();
       }, BEAT * 210);
     }
 
@@ -1090,8 +1190,10 @@
       if (introMusicTimer) clearInterval(introMusicTimer);
       introMusicTimer = null;
       introMusicStep = 0;
+      introMusicGain = 0;
     }
 
+    // 전투 BGM은 보스 페이즈와 난이도에 맞춰 밀도를 조금씩 올린다.
     function startBgm() {
       stopIntroMusic();
       stopBgm();
@@ -1438,6 +1540,7 @@
       return true;
     }
 
+    // 페이즈 보상: 보스 체력 구간을 넘길 때 일시정지하고 업그레이드 3개를 제시한다.
     function showUpgradeChoices() {
       mode = "upgrade";
       paused = true;
@@ -1456,6 +1559,7 @@
       }
       overlay.classList.add("visible");
       overlayTitle.textContent = "PHASE DATA CAPTURED";
+      setMobileControlsActive(false);
       difficultySelect.classList.add("hidden");
       controlSelect.classList.add("hidden");
       introActions.classList.add("hidden");
@@ -1492,8 +1596,10 @@
       addPopup(`UPGRADE ACQUIRED: ${choice.name}`, player.x, player.y - 44, "#ffd66b", 18);
       playSound("itemGet");
       mode = "bullet";
+      setMobileControlsActive(true);
     }
 
+    // 1차 보스 처치 후 최종 코어가 재충전되는 경고 연출을 시작한다.
     function startFinalWarning() {
       if (runStage === 2 || gameOver) return;
       runStage = 2;
@@ -1517,6 +1623,7 @@
       pendingSnipes.length = 0;
       overlay.classList.add("visible");
       overlayTitle.textContent = "- WARNING -";
+      setMobileControlsActive(false);
       difficultySelect.classList.add("hidden");
       controlSelect.classList.add("hidden");
       introActions.classList.add("hidden");
@@ -1541,6 +1648,7 @@
       warningPulse = 0;
       warningSirenClock = 0;
       overlay.classList.remove("visible");
+      setMobileControlsActive(true);
       player.alive = true;
       player.invuln = 1.35;
       player.dashEnergy = player.dashMax;
@@ -1574,15 +1682,17 @@
         overlay.classList.add("visible");
         overlayTitle.textContent = "PAUSED";
         overlayLine1.textContent = "ESC 또는 P를 누르면 전투로 복귀합니다.";
-        overlayLine2.textContent = "난이도와 조작 방식을 바꾼 뒤 재설정 후 재시작을 누르세요.";
-        overlayLine3.textContent = `현재 설정: ${diff().label} / ${controlLabel(controlMode)}`;
+        overlayLine2.textContent = "난이도를 바꾼 뒤 재설정 후 재시작을 누르세요.";
+        overlayLine3.textContent = `현재 난이도 ${diff().label}`;
         difficultySelect.classList.add("hidden");
         controlSelect.classList.add("hidden");
         introActions.classList.add("hidden");
         pauseControls.classList.remove("hidden");
+        setMobileControlsActive(false);
       } else {
         overlay.classList.remove("visible");
         pauseControls.classList.add("hidden");
+        setMobileControlsActive(true);
       }
     }
 
@@ -1745,6 +1855,7 @@
       tone(300 + ratio * 420, 0.12, "triangle", 0.04, 1.8);
     }
 
+    // 피격 처리: 실드, 목숨, 최종 게임오버 순서로 피해를 흡수한다.
     function takeHit() {
       if (!player.alive || gameOver) return;
       if (player.shield > 0) {
@@ -1755,7 +1866,43 @@
         playSound("phase");
         return;
       }
-      endGame();
+      player.lives = Math.max(0, player.lives - 1);
+      if (player.lives > 0) {
+        revivePlayer();
+      } else {
+        endGame();
+      }
+    }
+
+    // 목숨이 남아 있으면 탄막을 정리하고 무적 상태로 다시 전장에 복귀시킨다.
+    function revivePlayer() {
+      player.alive = true;
+      player.x = width / 2;
+      player.y = height - 120;
+      player.vx = 0;
+      player.vy = 0;
+      player.angle = -Math.PI / 2;
+      player.charging = false;
+      player.charge = 0;
+      player.dashTime = 0;
+      player.knockbackTimer = 0;
+      player.invuln = 2.2;
+      player.reviveTimer = 1.1;
+      bullets.length = 0;
+      warnings.length = 0;
+      lasers.length = 0;
+      pendingSnipes.length = 0;
+      shake = Math.max(shake, 16);
+      hitStop = Math.max(hitStop, 0.08);
+      playSound("phaseShift");
+      addImpactRing(player.x, player.y, 82, "#ffffff", 0.46, 9);
+      addImpactRing(player.x, player.y, 138, "#43d9ff", 0.64, 6);
+      addPopup(`REVIVE - LIFE ${player.lives}`, player.x, player.y - 44, "#ffffff", 20);
+      for (let i = 0; i < 48; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 160 + Math.random() * 460;
+        sparks.push({ x: player.x, y: player.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.55, max: 0.55, color: i % 2 ? "#43d9ff" : "#ffffff" });
+      }
     }
 
     function slash() {
@@ -2164,6 +2311,7 @@
       patternClock = Math.max(BEAT * 1.75, BEAT * (4.8 - difficulty * 0.72 - boss.phase * 0.18)) * diff().pattern;
     }
 
+    // 보스 AI: 시간 기반 난이도 상승과 체력 기반 페이즈 전환을 담당한다.
     function updateBoss(dt) {
       if (!boss.alive) return;
       difficulty = runStage === 2 ? Math.max(3.6, time / 20) : Math.min(3.0, time / 58);
@@ -2209,6 +2357,7 @@
       }
     }
 
+    // 플레이어 갱신: 방향키 이동, 쿨타임, 차징, 부활/무적 타이머를 처리한다.
     function updatePlayer(dt) {
       const move = keyVector();
       const powered = player.powerTimer > 0;
@@ -2236,9 +2385,6 @@
 
       player.x = Math.max(20, Math.min(width - 20, player.x));
       player.y = Math.max(20, Math.min(height - 20, player.y));
-      if (controlMode === "mouse") {
-        player.angle = Math.atan2(pointer.y - player.y, pointer.x - player.x);
-      }
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashEnergy = Math.min(player.dashMax, player.dashEnergy + player.dashRegen * dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
@@ -2250,6 +2396,7 @@
       player.powerTimer = Math.max(0, player.powerTimer - dt);
       player.shotTimer = Math.max(0, player.shotTimer - dt);
       player.knockbackTimer = Math.max(0, player.knockbackTimer - dt);
+      player.reviveTimer = Math.max(0, player.reviveTimer - dt);
       player.dashChainTimer = Math.max(0, player.dashChainTimer - dt);
       if (player.dashChainTimer <= 0) player.dashChain = 0;
       if (player.charging && player.shotCooldown <= 0) {
@@ -2294,6 +2441,7 @@
       localStorage.setItem("blueTiltHighScore", String(highScore));
       overlay.classList.add("visible");
       overlayTitle.textContent = "SYSTEM FAILURE";
+      setMobileControlsActive(false);
       difficultySelect.classList.add("hidden");
       controlSelect.classList.add("hidden");
       introActions.classList.add("hidden");
@@ -2320,6 +2468,7 @@
       localStorage.setItem("blueTiltHighScore", String(highScore));
       overlay.classList.add("visible");
       overlayTitle.textContent = "CORE SHUTDOWN";
+      setMobileControlsActive(false);
       difficultySelect.classList.add("hidden");
       controlSelect.classList.add("hidden");
       introActions.classList.add("hidden");
@@ -2336,6 +2485,7 @@
       }
     }
 
+    // 전투 월드 갱신: 충돌, 탄막 이동, 레이저/아이템/이펙트 수명을 처리한다.
     function updateWorld(dt) {
       trimEffectLists();
 
@@ -2719,6 +2869,7 @@
       ctx.restore();
     }
 
+    // 캔버스 렌더링: 배경부터 전투 이펙트까지 한 프레임을 그린다.
     function renderGame() {
       if (canvas.style.display === "none") return;
       ctx.save();
@@ -2956,6 +3107,25 @@
           }
           ctx.restore();
         }
+        if (player.reviveTimer > 0) {
+          const reviveRatio = player.reviveTimer / 1.1;
+          ctx.save();
+          ctx.globalAlpha = 0.18 + reviveRatio * 0.32;
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = "#43d9ff";
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 34 + (1 - reviveRatio) * 46, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 0.16 + reviveRatio * 0.24;
+          ctx.strokeStyle = "#43d9ff";
+          ctx.setLineDash([8, 8]);
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 54 + (1 - reviveRatio) * 62, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
         drawPlayerLike(player.x, player.y, player.angle, player.invuln > 0 ? 0.72 : 1, 1, tilt);
       }
 
@@ -3058,6 +3228,7 @@
           const statuses = [];
           if (boss.phaseShiftTimer > 0) statuses.push(`PHASE SHIFT ${boss.phaseShiftTimer.toFixed(1)}s`);
           if (boss.groggyTimer > 0) statuses.push(`GROGGY DAMAGE UP ${boss.groggyTimer.toFixed(1)}s`);
+          statuses.push(`LIFE ${player.lives}/${player.maxLives}`);
           if (player.powerTimer > 0) statuses.push(`BLADE ${player.powerTimer.toFixed(1)}s`);
           if (player.shotTimer > 0) statuses.push(`SHOT+ ${player.shotTimer.toFixed(1)}s`);
           if (player.shield > 0) statuses.push(`BARRIER x${player.shield}`);
@@ -3079,16 +3250,12 @@
       }
     }
 
+    // 입력 처리: 데스크톱 키보드와 모바일 전용 터치 패널을 같은 key/action 흐름으로 연결한다.
     window.addEventListener("resize", resize);
     difficultySelect.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-difficulty]");
       if (!button || mode !== "intro") return;
       chooseIntroDifficulty(button.dataset.difficulty);
-    });
-    controlSelect.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-control]");
-      if (!button || mode !== "intro") return;
-      chooseControlMode(button.dataset.control);
     });
     startGameButton.addEventListener("click", () => {
       if (mode !== "intro") return;
@@ -3096,7 +3263,7 @@
       introDifficultyPicked = true;
       introControlPicked = true;
       if (!difficultySettings[difficultyMode]) difficultyMode = "EASY";
-      if (controlMode !== "mouse" && controlMode !== "keyboard") controlMode = "mouse";
+      controlMode = "keyboard";
       resetGame();
     });
     pauseDifficultySelect.addEventListener("click", (event) => {
@@ -3104,37 +3271,41 @@
       if (!button || !paused || mode !== "bullet") return;
       choosePauseDifficulty(button.dataset.difficulty);
     });
-    pauseControlSelect.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-control]");
-      if (!button || !paused || mode !== "bullet") return;
-      choosePauseControlMode(button.dataset.control);
-    });
     restartWithDifficulty.addEventListener("click", restartFromPause);
-    window.addEventListener("contextmenu", (event) => {
-      if (controlMode === "mouse" && mode === "bullet") event.preventDefault();
-    });
-    window.addEventListener("mousemove", (event) => {
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
-    });
-    window.addEventListener("mousedown", (event) => {
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
-      if (controlMode !== "mouse" || mode !== "bullet" || paused || gameOver) return;
+    mobileControls.addEventListener("pointerdown", (event) => {
+      const keyButton = event.target.closest("[data-touch-key]");
+      const actionButton = event.target.closest("[data-touch-action]");
+      if (!keyButton && !actionButton) return;
       event.preventDefault();
-      if (event.button === 0 && !player.charging && player.shotCooldown <= 0) {
+      if (mode !== "bullet" || paused || gameOver) return;
+      if (keyButton) {
+        keys.add(keyButton.dataset.touchKey);
+        return;
+      }
+      const action = actionButton.dataset.touchAction;
+      if (action === "dash") dash();
+      if (action === "slash") slash();
+      if (action === "shot" && !player.charging && player.shotCooldown <= 0) {
         player.charging = true;
         player.charge = 0;
-      } else if (event.button === 2) {
-        slash();
       }
     });
-    window.addEventListener("mouseup", (event) => {
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
-      if (controlMode !== "mouse" || mode !== "bullet" || paused || gameOver) return;
+    mobileControls.addEventListener("pointerup", (event) => {
+      const keyButton = event.target.closest("[data-touch-key]");
+      const actionButton = event.target.closest("[data-touch-action]");
+      if (!keyButton && !actionButton) return;
       event.preventDefault();
-      if (event.button === 0) fireChargedShot();
+      if (keyButton) keys.delete(keyButton.dataset.touchKey);
+      if (actionButton && actionButton.dataset.touchAction === "shot") fireChargedShot();
+    });
+    mobileControls.addEventListener("pointercancel", (event) => {
+      const keyButton = event.target.closest("[data-touch-key]");
+      const actionButton = event.target.closest("[data-touch-action]");
+      if (keyButton) keys.delete(keyButton.dataset.touchKey);
+      if (actionButton && actionButton.dataset.touchAction === "shot") {
+        player.charging = false;
+        player.charge = 0;
+      }
     });
 
     window.addEventListener("keydown", (event) => {
@@ -3157,15 +3328,11 @@
         return;
       }
       if (paused) return;
-      if (controlMode === "mouse") {
-        if (key === " ") dash();
-      } else {
-        if (key === "a") dash();
-        if (key === "s") slash();
-        if (key === "d" && !event.repeat && mode === "bullet" && player.shotCooldown <= 0) {
-          player.charging = true;
-          player.charge = 0;
-        }
+      if (key === "a") dash();
+      if (key === "s") slash();
+      if (key === "d" && !event.repeat && mode === "bullet" && player.shotCooldown <= 0) {
+        player.charging = true;
+        player.charge = 0;
       }
       keys.add(key);
     });
@@ -3176,7 +3343,7 @@
         keys.delete(key);
         return;
       }
-      if (controlMode !== "mouse" && key === "d") fireChargedShot();
+      if (key === "d") fireChargedShot();
       keys.delete(key);
     });
 
